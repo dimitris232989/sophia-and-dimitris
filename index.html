@@ -26,17 +26,18 @@
   --leaf: #87a382;
   --ctrl: #ffffff;
   --ctrl-line: #e4d9cf;
+  --song: #2e2522;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #1d1918; --blob-1: #3a2427; --blob-2: #34281f; --blob-3: #262a22;
-    --muted: #a99c95; --ctrl: #2a2423; --ctrl-line: #3c3331; color-scheme: dark;
+    --muted: #a99c95; --ctrl: #2a2423; --ctrl-line: #3c3331; --song: #f1ece8; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #1d1918; --blob-1: #3a2427; --blob-2: #34281f; --blob-3: #262a22;
-  --muted: #a99c95; --ctrl: #2a2423; --ctrl-line: #3c3331; color-scheme: dark;
+  --muted: #a99c95; --ctrl: #2a2423; --ctrl-line: #3c3331; --song: #f1ece8; color-scheme: dark;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -56,6 +57,12 @@ body {
 }
 #petals { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
 .stage, .controls { position: relative; z-index: 1; }
+.song { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; width: 100%; max-width: 420px; }
+.song iframe { flex: 0 0 200px; width: 200px; height: 113px; border: 0; border-radius: 6px; background: #000; }
+.song p { min-width: 0; display: flex; flex-direction: column; gap: 2px; font: 300 .95rem/1.25 "Fraunces", Georgia, serif; color: var(--song); }
+.song span { font: 400 .68rem/1.35 "Inter", sans-serif; color: var(--muted); margin-bottom: 4px; }
+.song b { font-weight: 400; }
+.song em { color: var(--muted); }
 .serif { font-family: "Fraunces", Georgia, serif; }
 .fl { display: block; overflow: visible; }
 
@@ -384,6 +391,12 @@ body {
 </svg>
 
 <canvas id="petals" aria-hidden="true"></canvas>
+
+<!-- Our song: the official video, played by YouTube's own player -->
+<div class="song">
+  <iframe src="https://www.youtube-nocookie.com/embed/o_1aF54DO60?playsinline=1&amp;rel=0" title="Lana Del Rey, Young and Beautiful" allow="encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+  <p><span>Press play first, then turn the pages</span><b>Young and Beautiful</b><em>Lana Del Rey</em></p>
+</div>
 
 <div class="stage">
   <div id="book">
