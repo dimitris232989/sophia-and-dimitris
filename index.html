@@ -1,0 +1,1648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sophia and Dimitris</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<style>
+:root {
+  --bg: #f4ede6;
+  --blob-1: #f2d4d2;
+  --blob-2: #f6dfcc;
+  --blob-3: #e3e6d6;
+  --paper: #fdf9f3;
+  --text: #2e2522;
+  --muted: #8d807a;
+  --accent: #b5505f;
+  --cloth: #9c4855;
+  --cloth-dark: #7d3542;
+  --foil: #f1dcae;
+  --leaf: #87a382;
+  --ctrl: #ffffff;
+  --ctrl-line: #e4d9cf;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1d1918; --blob-1: #3a2427; --blob-2: #34281f; --blob-3: #262a22;
+    --muted: #a99c95; --ctrl: #2a2423; --ctrl-line: #3c3331; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1d1918; --blob-1: #3a2427; --blob-2: #34281f; --blob-3: #262a22;
+  --muted: #a99c95; --ctrl: #2a2423; --ctrl-line: #3c3331; color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text); background: var(--bg);
+  background-image:
+    radial-gradient(circle at 12% 18%, var(--blob-1) 0, transparent 38%),
+    radial-gradient(circle at 88% 12%, var(--blob-2) 0, transparent 34%),
+    radial-gradient(circle at 80% 88%, var(--blob-1) 0, transparent 36%),
+    radial-gradient(circle at 15% 85%, var(--blob-3) 0, transparent 34%);
+  background-attachment: fixed;
+  min-height: 100vh; min-height: 100svh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 26px; padding: 28px 16px; overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+#petals { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.stage, .controls { position: relative; z-index: 1; }
+.serif { font-family: "Fraunces", Georgia, serif; }
+.fl { display: block; overflow: visible; }
+
+.stage { width: 100%; max-width: 1000px; display: flex; justify-content: center; position: relative; }
+.stage::after {
+  content: ""; position: absolute; left: 15%; right: 15%; bottom: -14px; height: 30px; z-index: -1;
+  background: radial-gradient(ellipse at center, rgba(60, 30, 25, .28), transparent 70%); filter: blur(6px);
+}
+
+/* ---------- Pages (shared) ---------- */
+#book .page { overflow: hidden; }
+.paper {
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .45 0 0 0 0 .35 0 0 0 0 .28 0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  color: var(--text);
+}
+.page-inner { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10% 11%; }
+.page-num { position: absolute; bottom: 4.5%; left: 0; right: 0; text-align: center; font: 300 .7rem "Fraunces", serif; color: var(--muted); }
+.small-caps { font-size: .66rem; letter-spacing: .32em; text-transform: uppercase; color: var(--muted); }
+.center { align-items: center; justify-content: center; text-align: center; }
+
+/* ---------- Cover ---------- */
+.cloth {
+  background-color: var(--cloth);
+  background-image:
+    radial-gradient(ellipse at 50% 40%, rgba(255,255,255,.08), transparent 65%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px);
+  color: var(--foil);
+}
+.cover .page-inner { padding: 9% 10% 8%; align-items: center; }
+.cover .frame { position: absolute; inset: 4.5%; border: 1px solid rgba(241, 220, 174, .45); border-radius: 2px; pointer-events: none; }
+.cover .hinge { position: absolute; top: 0; bottom: 0; left: 4%; width: 2px; background: rgba(0,0,0,.18); box-shadow: 2px 0 0 rgba(255,255,255,.06); }
+.polaroid {
+  position: relative; width: 82%; margin-top: 4%; background: #fffdf8; padding: 4% 4% 13%;
+  transform: rotate(-2.5deg); box-shadow: 0 10px 24px rgba(30, 10, 10, .35), 0 1px 2px rgba(0,0,0,.2);
+}
+.polaroid img { display: block; width: 100%; aspect-ratio: 1 / 0.92; object-fit: cover; object-position: 50% 42%; }
+.polaroid .caption { position: absolute; left: 0; right: 0; bottom: 3.2%; text-align: center; font: italic 300 clamp(.75rem, 1.8vw, .95rem) "Fraunces", serif; color: #6d5c57; }
+.tape { position: absolute; width: 30%; height: 9%; background: rgba(248, 226, 214, .78); box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+.tape.l { top: -4%; left: -7%; transform: rotate(-32deg); }
+.tape.r { top: -4%; right: -7%; transform: rotate(30deg); }
+.cover .sprig-a { position: absolute; right: 2%; bottom: 23%; width: 26%; transform: rotate(18deg); }
+.cover .sprig-b { position: absolute; left: 3%; bottom: 31%; width: 18%; transform: scaleX(-1) rotate(12deg); }
+.cover .titles { margin-top: auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.cover h1 { font-family: "Fraunces", Georgia, serif; font-weight: 300; font-size: clamp(1.5rem, 4.2vw, 2.25rem); line-height: 1.1; letter-spacing: -.01em; color: var(--foil); text-shadow: 0 1px 0 rgba(0,0,0,.25); }
+.cover h1 em { font-style: italic; font-size: .7em; opacity: .85; padding: 0 .15em; }
+.cover .date { font-size: clamp(.62rem, 1.5vw, .74rem); letter-spacing: .36em; color: var(--foil); opacity: .8; }
+
+/* ---------- Endpapers ---------- */
+.endpaper { background-color: #f3dcd8; }
+.endpaper svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* ---------- Belongs to ---------- */
+.wreath { position: relative; width: 78%; aspect-ratio: 1; display: grid; place-items: center; }
+.wreath svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wreath .name { font-family: "Fraunces", serif; font-weight: 300; font-style: italic; font-size: clamp(1.6rem, 4.5vw, 2.3rem); color: var(--accent); }
+.belongs .small-caps { margin-bottom: 6%; }
+.belongs .note { margin-top: 7%; font: italic 300 clamp(.8rem, 2vw, .95rem) "Fraunces", serif; color: var(--muted); }
+
+/* ---------- Chapter opener ---------- */
+.chapter .num { font-family: "Fraunces", serif; font-weight: 300; font-size: clamp(3.5rem, 11vw, 5.5rem); line-height: 1; color: var(--accent); opacity: .9; }
+.chapter h2 { font-family: "Fraunces", serif; font-weight: 300; font-size: clamp(1.5rem, 4.4vw, 2.1rem); margin: 10px 0 18px; letter-spacing: -.01em; }
+.chapter .sprig { width: 30%; margin: 4% 0; }
+.chapter .soon { font: italic 300 clamp(.85rem, 2vw, 1rem) "Fraunces", serif; color: var(--muted); }
+
+/* ---------- Story pages (sizes scale with the page) ---------- */
+.page-inner { container-type: inline-size; }
+.story .page-inner { justify-content: center; padding: 12% 13%; }
+.story p { font: 300 4.4cqw/1.7 "Fraunces", Georgia, serif; margin-bottom: 3.6cqw; }
+.story .lead { font-size: 7cqw; line-height: 1.25; margin-bottom: 6cqw; color: var(--accent); font-style: italic; }
+.story .aside { font-style: italic; font-size: 5.6cqw; color: var(--accent); padding-left: 8cqw; }
+.story .corner-sprig { position: absolute; right: 6%; bottom: 7%; width: 13%; transform: rotate(-14deg); opacity: .9; }
+
+.remember .page-inner { gap: 7cqw; }
+.memories { list-style: none; display: flex; flex-direction: column; gap: 6.5cqw; text-align: left; width: 100%; }
+.memories li { display: flex; align-items: center; gap: 5cqw; font: 300 5cqw/1.35 "Fraunces", Georgia, serif; }
+.memories li svg { flex: 0 0 11cqw; width: 11cqw; height: 11cqw; }
+.memories .red { color: #b8322a; font-style: italic; }
+.remember .note { font: italic 300 4cqw "Fraunces", serif; color: var(--muted); }
+
+.apart .page-inner { gap: 3cqw; }
+.mini-globe { width: 70%; aspect-ratio: 1; margin-bottom: 4cqw; }
+.mini-globe svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.mini-globe .sphere { fill: #f6eee6; stroke: #e6d9cd; }
+.mini-globe .land { fill: #e2d1c4; }
+.mini-globe .grat { fill: none; stroke: #ece1d6; stroke-width: .6; }
+.mini-globe .route { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 3 4; stroke-linecap: round; }
+.mini-globe .pin { fill: var(--accent); stroke: #fff; stroke-width: 1.5; }
+.mini-globe .lbl { font: 500 10px "Inter", sans-serif; fill: var(--text); paint-order: stroke; stroke: #f6eee6; stroke-width: 3px; }
+.apart .line { font: 300 4.4cqw/1.6 "Fraunces", Georgia, serif; }
+.apart .muted { color: var(--muted); font-style: italic; }
+.apart .worth { margin-top: 3cqw; font: italic 400 5.4cqw "Fraunces", serif; color: var(--accent); }
+
+/* Perfume */
+.perfume .page-inner { gap: 3cqw; }
+.perfume .bottle { width: 52%; overflow: visible; margin-bottom: 4cqw; }
+.perfume .scent path { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; opacity: .45; animation: drift 4s ease-in-out infinite; }
+.perfume .scent path:nth-child(2) { animation-delay: 1.3s; }
+.perfume .scent path:nth-child(3) { animation-delay: 2.6s; }
+@keyframes drift { 0%,100% { transform: translateY(0); opacity: .15 } 50% { transform: translateY(-5px); opacity: .55 } }
+.perfume .big { font: italic 300 7cqw/1.2 "Fraunces", serif; color: var(--accent); }
+.perfume .sub, .almost .sub { font: 300 4.4cqw/1.6 "Fraunces", serif; color: var(--muted); }
+
+/* Almost */
+.almost .page-inner { gap: 5cqw; }
+.almost .quote { font: italic 300 8.4cqw/1.25 "Fraunces", serif; }
+.almost .yet { font: italic 400 6cqw "Fraunces", serif; color: var(--accent); }
+
+/* Invitation card */
+.invite .page-inner { gap: 6cqw; }
+.invite .intro-line { font: italic 300 4.6cqw/1.4 "Fraunces", serif; }
+.invite .card {
+  position: relative; width: 84%; padding: 8cqw 6cqw; background: #fffdf9; text-align: center;
+  border: 1px solid #ead9cc; outline: 1px solid #ead9cc; outline-offset: -2.4cqw;
+  box-shadow: 0 6px 16px rgba(60, 30, 25, .12); transform: rotate(-1.8deg);
+  display: flex; flex-direction: column; gap: 2cqw;
+}
+.invite .card .what { font: 400 6.6cqw/1.15 "Fraunces", serif; color: #d0703a; }
+.invite .card .details { font-size: 3.4cqw; color: var(--muted); letter-spacing: .04em; }
+.invite .card .ask { font: italic 300 5cqw "Fraunces", serif; margin-top: 2cqw; }
+.invite .stamp {
+  position: absolute; right: -4cqw; bottom: -4cqw; padding: 1.4cqw 4cqw; border: 2px solid var(--accent); border-radius: 6px;
+  font: 600 4.4cqw "Inter", sans-serif; letter-spacing: .24em; text-transform: uppercase; color: var(--accent);
+  transform: rotate(-14deg); background: rgba(255, 253, 249, .85); opacity: .9;
+}
+.invite .after { font: 300 4cqw/1.6 "Fraunces", serif; color: var(--muted); }
+.invite .after em { color: var(--text); }
+
+/* Halloween */
+.costumes .page-inner { gap: 7cqw; }
+.pair { display: flex; align-items: center; justify-content: center; gap: 4cqw; width: 100%; }
+.pair figure { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3cqw; }
+.pair figure svg { width: 100%; height: 26cqw; overflow: visible; }
+.pair figcaption { font: 300 4.2cqw/1.3 "Fraunces", serif; }
+.pair figcaption b { font-weight: 400; color: var(--accent); font-style: italic; }
+.pair .amp { font: italic 300 8cqw "Fraunces", serif; color: var(--muted); }
+.costumes .smoke path { fill: none; stroke: #c9b8de; stroke-width: 2; stroke-linecap: round; animation: drift 4s ease-in-out infinite; }
+.costumes .smoke path:nth-child(2) { animation-delay: 2s; }
+.costumes .hot { font: italic 400 6cqw "Fraunces", serif; color: var(--accent); }
+
+.illo { width: 70%; overflow: visible; margin-bottom: 3cqw; }
+.jelly .page-inner, .night .page-inner, .pretty .page-inner { gap: 4cqw; }
+.lead-c { font: italic 300 6cqw/1.25 "Fraunces", serif; color: var(--accent); }
+.line { font: 300 4.4cqw/1.6 "Fraunces", serif; }
+.wink { font: italic 300 4cqw "Fraunces", serif; color: var(--muted); }
+.jelly .sparkle path { animation: twinkle 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.jelly .sparkle path:nth-child(2) { animation-delay: 1.2s; }
+@keyframes twinkle { 0%,100% { opacity: .3; transform: scale(.7) } 50% { opacity: 1; transform: scale(1) } }
+
+.pretty .quote { font: italic 300 9cqw/1.15 "Fraunces", serif; margin: 3cqw 0; }
+.pretty .yes { font: italic 400 6cqw "Fraunces", serif; color: var(--accent); }
+
+.night .phone { width: 46%; }
+.night .typing circle { animation: dots 1.2s ease-in-out infinite; }
+.night .typing circle:nth-child(2) { animation-delay: .2s; }
+.night .typing circle:nth-child(3) { animation-delay: .4s; }
+@keyframes dots { 0%,100% { opacity: .3 } 50% { opacity: 1 } }
+
+/* Greek Night */
+.ride .page-inner, .bar .page-inner, .texts .page-inner, .sunrise .page-inner { gap: 4cqw; }
+.ride .car { animation: bump .6s ease-in-out infinite; }
+.ride .speed line { animation: dash 1s linear infinite; }
+.ride .float-heart { animation: drift 3s ease-in-out infinite; }
+@keyframes bump { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-1.5px) } }
+@keyframes dash { 0% { opacity: 1; transform: translateX(0) } 100% { opacity: 0; transform: translateX(-8px) } }
+.beers { width: 62%; }
+.bar .sparkle path { animation: twinkle 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.bar .sparkle path:nth-child(2) { animation-delay: .8s; }
+.bar .sparkle path:nth-child(3) { animation-delay: 1.6s; }
+
+.chat { width: 88%; display: flex; flex-direction: column; gap: 3cqw; margin: 3cqw 0; padding: 6cqw 5cqw; background: #f7f0ea; border-radius: 5cqw; }
+.bubble { max-width: 78%; padding: 2.6cqw 4cqw; border-radius: 4.5cqw; font: 400 4cqw/1.35 "Inter", sans-serif; text-align: left; }
+.bubble.me { align-self: flex-end; background: #c45c6a; color: #fff; border-bottom-right-radius: 1.2cqw; }
+.bubble.her { align-self: flex-start; background: #fff; color: var(--text); border-bottom-left-radius: 1.2cqw; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.aside-c { font: italic 400 6cqw "Fraunces", serif; color: var(--accent); }
+
+.kiss .page-inner { gap: 6cqw; }
+.wreath.big { width: 86%; }
+.kiss-center { display: flex; flex-direction: column; align-items: center; gap: 2cqw; }
+.kiss .kissed { font: italic 300 10cqw/1 "Fraunces", serif; color: var(--accent); }
+.kiss .date { font-size: 3cqw; letter-spacing: .3em; color: var(--muted); }
+
+.sun { width: 56%; }
+.sun .rays { animation: rise 6s ease-in-out infinite; }
+@keyframes rise { 0%,100% { opacity: .5 } 50% { opacity: 1 } }
+
+/* The first weeks */
+.bbq .page-inner, .bday .page-inner, .home .page-inner { gap: 4cqw; }
+.bbq .illo, .home .illo { width: 62%; }
+.cake { width: 58%; }
+.smoke-bbq path, .chimney-smoke path { animation: drift 3.5s ease-in-out infinite; }
+.smoke-bbq path:nth-child(2) { animation-delay: 1.1s; }
+.smoke-bbq path:nth-child(3) { animation-delay: 2.2s; }
+.bday .flames path { transform-box: fill-box; transform-origin: 50% 100%; animation: flicker 1.4s ease-in-out infinite; }
+.bday .flames path:nth-child(2) { animation-delay: .4s; }
+.bday .flames path:nth-child(3) { animation-delay: .8s; }
+@keyframes flicker { 0%,100% { transform: scale(1) rotate(-3deg) } 50% { transform: scale(1.1, .92) rotate(3deg) } }
+.quote-s { font: italic 400 7.4cqw/1.2 "Fraunces", serif; color: var(--accent); }
+.home .window { animation: glow 3s ease-in-out infinite; }
+@keyframes glow { 0%,100% { fill: #f6cf7e } 50% { fill: #fbe0a0 } }
+
+/* Officially & Home */
+.sushi .page-inner, .sweats .page-inner, .xmas .page-inner, .family .page-inner, .cooking .page-inner, .parting .page-inner { gap: 3.6cqw; }
+.pants { width: 30%; }
+.tree { width: 30%; }
+.xmas .star { transform-box: fill-box; transform-origin: center; animation: twinkle 2.6s ease-in-out infinite; }
+.cooking .steam path { animation: drift 3.5s ease-in-out infinite; }
+.cooking .steam path:nth-child(2) { animation-delay: 1.1s; }
+.cooking .steam path:nth-child(3) { animation-delay: 2.2s; }
+
+.dinner .page-inner { gap: 3.6cqw; }
+.dinner .candle { transform-box: fill-box; transform-origin: 50% 100%; animation: flicker 1.4s ease-in-out infinite; }
+
+/* Greece, Athens, Torino */
+.airport .page-inner, .ghome .page-inner, .days .page-inner, .athens .page-inner, .distance .page-inner, .torino .page-inner { gap: 4cqw; }
+.loop { display: flex; align-items: flex-start; justify-content: center; gap: 2cqw; width: 100%; margin: 4cqw 0; }
+.loop figure { display: flex; flex-direction: column; align-items: center; gap: 2cqw; width: 22cqw; }
+.loop svg { width: 18cqw; height: 18cqw; }
+.loop figcaption { font: italic 300 3.8cqw "Fraunces", serif; }
+.loop .arrow { color: var(--muted); font-size: 4.5cqw; margin-top: 6cqw; }
+.distance .beat { transform-box: fill-box; transform-origin: center; animation: beat 1.6s ease-in-out infinite; }
+@keyframes beat { 0%,100% { transform: scale(1) } 15% { transform: scale(1.18) } 30% { transform: scale(1) } }
+
+.pass { display: flex; width: 92%; background: #fffdf9; border-radius: 3cqw; box-shadow: 0 6px 16px rgba(60,30,25,.12); transform: rotate(-1.5deg); text-align: left; overflow: hidden; }
+.pass-main { flex: 1; padding: 4.5cqw 5cqw; display: flex; flex-direction: column; gap: 3cqw; }
+.pass-main .small-caps { color: var(--accent); }
+.route-row { display: flex; align-items: center; justify-content: space-between; }
+.route-row b { display: block; font: 400 7.5cqw/1 "Fraunces", serif; }
+.route-row span, .pass-row span, .pass-stub span { display: block; font-size: 2.6cqw; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 1cqw; }
+.route-row svg { width: 9cqw; height: 7cqw; }
+.pass-row { display: flex; gap: 6cqw; font: 400 3.6cqw "Inter", sans-serif; }
+.pass-row span { margin: 0 0 .8cqw; }
+.pass-stub { width: 24%; border-left: 2px dashed #e6d9cd; padding: 4.5cqw 3cqw; display: flex; flex-direction: column; justify-content: center; font: italic 400 4.2cqw/1.2 "Fraunces", serif; color: var(--accent); }
+.pass-stub span { margin: 0 0 1cqw; font-style: normal; }
+
+.sub-s { font: italic 300 4.4cqw "Fraunces", serif; color: var(--muted); margin-bottom: 4cqw; }
+
+.letterp .page-inner { padding: 12% 12% 14%; justify-content: center; }
+.letterp p { font: 300 3.9cqw/1.7 "Fraunces", Georgia, serif; margin-bottom: 3.4cqw; }
+.letterp .hello { font-style: italic; font-size: 6cqw; color: var(--accent); margin-bottom: 2cqw; }
+.letterp .first { font-style: italic; font-size: 4.6cqw; }
+.letterp .sign { margin-top: 4cqw; text-align: right; font-style: italic; color: var(--muted); }
+.letterp .sign b { display: block; font: italic 400 6cqw "Fraunces", serif; color: var(--accent); margin-top: 1cqw; }
+
+.blank .page-inner { padding: 12% 11% 14%; }
+.blank .date-line { font-size: 2.8cqw; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid #e6d9cd; width: 50%; padding-bottom: 1cqw; margin-bottom: 6cqw; }
+.blank .lines { flex: 1; background: repeating-linear-gradient(to bottom, transparent 0 calc(8cqw - 1px), #ece2d8 calc(8cqw - 1px) 8cqw); }
+
+/* Photo pages: taped-in polaroids, two per page, staggered */
+.photos .page-inner { padding: 7% 9% 9%; justify-content: space-between; }
+.snap { position: relative; width: 44cqw; background: #fffdf8; padding: 2cqw 2cqw 0; box-shadow: 0 4px 12px rgba(60, 30, 25, .16), 0 1px 2px rgba(0,0,0,.08); }
+.snap.wide { width: 62cqw; }
+.snap img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: #f1e9e1; }
+.snap.wide img { aspect-ratio: 4 / 3; object-position: 50% 50%; }
+.snap figcaption { text-align: center; padding: 2.2cqw 1cqw 2.6cqw; font: italic 300 3.5cqw/1.3 "Fraunces", serif; color: #6d5c57; }
+.snap::before { content: ""; position: absolute; top: -2.2cqw; left: 50%; width: 16cqw; height: 4.4cqw; transform: translateX(-50%) rotate(-3deg); background: rgba(248, 226, 214, .8); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.snap:nth-child(1) { align-self: flex-start; rotate: -2.5deg; }
+.snap:nth-child(2) { align-self: flex-end; rotate: 2deg; }
+
+/* ---------- Back cover ---------- */
+.back .page-inner { align-items: center; justify-content: center; gap: 14px; }
+.back .sprig { width: 22%; }
+.back p { font: 300 .8rem "Inter", sans-serif; letter-spacing: .36em; color: var(--foil); opacity: .85; }
+
+/* ---------- Controls ---------- */
+.controls { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: .85rem; }
+.controls button {
+  width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--ctrl-line); background: var(--ctrl);
+  color: var(--text); font-size: 1.1rem; cursor: pointer; display: grid; place-items: center;
+  box-shadow: 0 2px 8px rgba(60, 30, 25, .08); transition: transform .15s ease;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .controls button { color: #f1ece8; } }
+.controls button:hover { transform: scale(1.06); }
+.controls button:disabled { opacity: .35; cursor: default; transform: none; }
+.controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#pageInfo { min-width: 120px; text-align: center; font: italic 300 .95rem "Fraunces", serif; }
+.hint { font-size: .75rem; color: var(--muted); letter-spacing: .08em; position: relative; z-index: 1; margin-top: -12px; }
+</style>
+</head>
+<body>
+
+<!-- Reusable drawings -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="glass" x1="0" x2="1">
+      <stop offset="0" stop-color="#fbe9ea"/><stop offset=".5" stop-color="#fdf6f4"/><stop offset="1" stop-color="#f2d6d8"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1">
+      <stop offset="0" stop-color="#d9b46a"/><stop offset=".45" stop-color="#f3dca3"/><stop offset="1" stop-color="#c79f55"/>
+    </linearGradient>
+    <symbol id="flower" viewBox="-50 -50 100 100">
+      <g style="fill: var(--p, #e9a8b1)">
+        <ellipse cx="0" cy="-23" rx="16" ry="24"/>
+        <ellipse cx="0" cy="-23" rx="16" ry="24" transform="rotate(72)"/>
+        <ellipse cx="0" cy="-23" rx="16" ry="24" transform="rotate(144)"/>
+        <ellipse cx="0" cy="-23" rx="16" ry="24" transform="rotate(216)"/>
+        <ellipse cx="0" cy="-23" rx="16" ry="24" transform="rotate(288)"/>
+      </g>
+      <g style="fill: var(--p2, #f6d3d8)">
+        <ellipse cx="0" cy="-13" rx="7" ry="11" transform="rotate(36)"/>
+        <ellipse cx="0" cy="-13" rx="7" ry="11" transform="rotate(108)"/>
+        <ellipse cx="0" cy="-13" rx="7" ry="11" transform="rotate(180)"/>
+        <ellipse cx="0" cy="-13" rx="7" ry="11" transform="rotate(252)"/>
+        <ellipse cx="0" cy="-13" rx="7" ry="11" transform="rotate(324)"/>
+      </g>
+      <circle r="9" style="fill: var(--c, #e8c27a)"/>
+    </symbol>
+    <symbol id="leaf" viewBox="-20 -40 40 80">
+      <path d="M0 40 C -20 10 -15 -22 0 -40 C 15 -22 20 10 0 40Z" style="fill: var(--lf, #87a382)"/>
+      <path d="M0 36 L0 -34" stroke="rgba(0,0,0,.12)" stroke-width="2" fill="none"/>
+    </symbol>
+    <!-- a little botanical sprig: stem, leaves, two flowers and a bud -->
+    <symbol id="sprig" viewBox="0 0 100 150">
+      <path d="M52 150 C 50 120, 57 92, 50 64 C 46 46, 50 30, 58 14" fill="none" style="stroke: var(--lf, #87a382)" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M51 98 C 40 88, 30 80, 22 62" fill="none" style="stroke: var(--lf, #87a382)" stroke-width="2" stroke-linecap="round"/>
+      <use href="#leaf" x="56" y="104" width="14" height="28" transform="rotate(48 63 118)"/>
+      <use href="#leaf" x="36" y="114" width="14" height="28" transform="rotate(-50 43 128)"/>
+      <use href="#leaf" x="54" y="64" width="12" height="24" transform="rotate(55 60 76)"/>
+      <use href="#leaf" x="32" y="76" width="11" height="22" transform="rotate(-60 37 87)"/>
+      <use href="#flower" x="38" y="-6" width="40" height="40"/>
+      <use href="#flower" x="6" y="42" width="30" height="30"/>
+      <ellipse cx="44" cy="54" rx="5" ry="7" transform="rotate(-25 44 54)" style="fill: var(--p, #e9a8b1)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<canvas id="petals" aria-hidden="true"></canvas>
+
+<div class="stage">
+  <div id="book">
+
+    <!-- 0 · Front cover -->
+    <div class="page cloth cover" data-density="hard">
+      <span class="hinge"></span>
+      <span class="frame"></span>
+      <div class="page-inner">
+        <div class="polaroid">
+          <span class="tape l"></span><span class="tape r"></span>
+          <img src="photos/cover.jpg" alt="Sophia and Dimitris">
+          <span class="caption">us</span>
+        </div>
+        <svg class="fl sprig-a" viewBox="0 0 100 150" style="--p:#f3c7cc;--p2:#fbe6e8;--lf:#a9c3a3" aria-hidden="true"><use href="#sprig"/></svg>
+        <svg class="fl sprig-b" viewBox="0 0 100 150" style="--p:#f6e3c6;--p2:#fff6e6;--lf:#a9c3a3" aria-hidden="true"><use href="#sprig"/></svg>
+        <div class="titles">
+          <h1>Sophia <em>and</em> Dimitris</h1>
+          <p class="date">8-11-2025</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1 · Endpaper -->
+    <div class="page endpaper" data-endpaper></div>
+
+    <!-- 2 · Belongs to -->
+    <div class="page paper belongs">
+      <div class="page-inner center">
+        <p class="small-caps">This book belongs to</p>
+        <div class="wreath" id="wreath"><span class="name">Sophia</span></div>
+        <p class="note">the story of us, so far</p>
+      </div>
+    </div>
+
+    <!-- 3 · Chapter I opener -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <p class="small-caps">Chapter</p>
+        <div class="num">I</div>
+        <h2>The Hoot</h2>
+        <svg class="fl sprig" viewBox="0 0 100 150" aria-hidden="true"><use href="#sprig"/></svg>
+        <p class="soon">Columbia, South Carolina</p>
+      </div>
+      <span class="page-num">1</span>
+    </div>
+
+    <!-- 4 · Chapter I story -->
+    <div class="page paper story">
+      <div class="page-inner">
+        <p class="lead">It started with a beer.</p>
+        <p>Chris invited me to The Hoot and mentioned that Irene would be there, with a friend of hers.</p>
+        <p class="aside">Sophia.</p>
+        <p>I told him I'd definitely come.</p>
+        <p>So I went, and there you were.</p>
+        <p>Nothing crazy happened that night. We talked a little, just a first hello. But I remember it.</p>
+        <svg class="fl corner-sprig" viewBox="0 0 100 150" style="--p:#c86b79;--p2:#e7a9b2" aria-hidden="true"><use href="#sprig"/></svg>
+      </div>
+      <span class="page-num">2</span>
+    </div>
+
+    <!-- 5 · What I remember -->
+    <div class="page paper remember">
+      <div class="page-inner center">
+        <p class="small-caps">What I remember</p>
+        <ul class="memories">
+          <li>
+            <svg class="fl" viewBox="-50 -50 100 100" style="--p:#c0392b;--p2:#e8796b" aria-hidden="true"><use href="#flower"/></svg>
+            <span>You were wearing something <em class="red">red</em>.</span>
+          </li>
+          <li>
+            <svg class="fl" viewBox="-50 -50 100 100" style="--p:#e9a8b1;--p2:#f6d3d8" aria-hidden="true"><use href="#flower"/></svg>
+            <span>Your hair was shorter.</span>
+          </li>
+          <li>
+            <svg class="fl" viewBox="-50 -50 100 100" style="--p:#c9b8de;--p2:#e8def3" aria-hidden="true"><use href="#flower"/></svg>
+            <span>And you smelled amazing.</span>
+          </li>
+        </ul>
+        <p class="note">Funny, the things that stay with you.</p>
+      </div>
+      <span class="page-num">3</span>
+    </div>
+
+    <!-- 6 · Apart -->
+    <div class="page paper apart">
+      <div class="page-inner center">
+        <div class="mini-globe" id="apartGlobe" role="img" aria-label="A globe showing Columbia, Greece and Italy"></div>
+        <p class="line">Two days later I flew back to Greece,<br>and you went back to Italy.</p>
+        <p class="line muted">We didn't see each other again until October.</p>
+        <p class="worth">Worth the wait.</p>
+      </div>
+      <span class="page-num">4</span>
+    </div>
+
+    <!-- 7 · Chapter II opener -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <p class="small-caps">Chapter</p>
+        <div class="num">II</div>
+        <h2>WECO</h2>
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#efbd9f;--p2:#f8dccb" aria-hidden="true"><use href="#sprig"/></svg>
+        <p class="soon">October 2025</p>
+      </div>
+      <span class="page-num">5</span>
+    </div>
+
+    <!-- 8 · Chapter II story -->
+    <div class="page paper story">
+      <div class="page-inner">
+        <p class="lead">October. Back in Columbia.</p>
+        <p>Chris asked me to go for a beer at WECO, and said you'd be meeting us there.</p>
+        <p>I was excited to see you again.</p>
+        <p>We got there first. You came a little later, and when you walked in I realised I'd forgotten how pretty you were.</p>
+        <svg class="fl corner-sprig" viewBox="0 0 100 150" style="--p:#efbd9f;--p2:#f8dccb" aria-hidden="true"><use href="#sprig"/></svg>
+      </div>
+      <span class="page-num">6</span>
+    </div>
+
+    <!-- 9 · The perfume -->
+    <div class="page paper perfume">
+      <div class="page-inner center">
+        <svg class="bottle" viewBox="0 0 160 210" aria-hidden="true">
+          <g class="scent">
+            <path d="M92 34 C 104 22, 96 12, 108 4" />
+            <path d="M80 30 C 70 16, 84 10, 76 -4" />
+            <path d="M104 40 C 120 34, 118 22, 132 16" />
+          </g>
+          <rect x="62" y="34" width="36" height="30" rx="5" fill="url(#gold)"/>
+          <rect x="70" y="62" width="20" height="12" fill="#ead9bb"/>
+          <rect x="30" y="72" width="100" height="116" rx="20" fill="url(#glass)" stroke="#e7cfd1" stroke-width="1.5"/>
+          <rect x="36" y="106" width="88" height="76" rx="14" fill="#e9a8b1" opacity=".55"/>
+          <rect x="40" y="80" width="8" height="90" rx="4" fill="#fff" opacity=".6"/>
+          <rect x="55" y="120" width="50" height="36" rx="3" fill="#fffaf3" stroke="#e7cfd1"/>
+          <text x="80" y="145" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-style="italic" font-size="20" fill="#b5505f">S</text>
+          <use href="#flower" x="16" y="172" width="26" height="26" style="--p:#c86b79;--p2:#e7a9b2"/>
+          <use href="#flower" x="122" y="176" width="20" height="20" style="--p:#f1d7b8;--p2:#fbeedd"/>
+          <use href="#leaf" x="38" y="180" width="8" height="18" transform="rotate(60 42 189)"/>
+        </svg>
+        <p class="big">And that perfume.</p>
+        <p class="sub">I can still smell it.<br>It always makes me think of you.</p>
+      </div>
+      <span class="page-num">7</span>
+    </div>
+
+    <!-- 10 · Alone for a moment -->
+    <div class="page paper story">
+      <div class="page-inner">
+        <p class="lead">Then Chris went to get another beer,</p>
+        <p>and for a little while it was just the two of us.</p>
+        <p>I was so nervous. I already liked you,</p>
+        <p>and I was trying very hard to play it cool.</p>
+        <svg class="fl corner-sprig" viewBox="0 0 100 150" style="--p:#c9b8de;--p2:#e8def3" aria-hidden="true"><use href="#sprig"/></svg>
+      </div>
+      <span class="page-num">8</span>
+    </div>
+
+    <!-- 11 · Almost -->
+    <div class="page paper almost">
+      <div class="page-inner center">
+        <p class="quote">All I wanted was to kiss you.</p>
+        <p class="sub">But I didn't.</p>
+        <svg class="fl" viewBox="-50 -50 100 100" width="26" height="26" style="--p:#c45c6a;--p2:#e7a9b2" aria-hidden="true"><use href="#flower"/></svg>
+        <p class="yet">Not yet.</p>
+      </div>
+      <span class="page-num">9</span>
+    </div>
+
+    <!-- 12 · The invitation -->
+    <div class="page paper invite">
+      <div class="page-inner center">
+        <p class="intro-line">Before we left, you asked me something.</p>
+        <div class="card">
+          <p class="small-caps">You're invited</p>
+          <p class="what">A Halloween party</p>
+          <p class="details">at your friends' · in two weeks</p>
+          <p class="ask">Want to come?</p>
+          <span class="stamp">Yes</span>
+        </div>
+        <p class="after">Then two weeks of nothing. No meeting, no talking.<br><em>Just waiting for Halloween.</em></p>
+      </div>
+      <span class="page-num">10</span>
+    </div>
+
+    <!-- 13 · Chapter III (to be written) -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <p class="small-caps">Chapter</p>
+        <div class="num">III</div>
+        <h2>Halloween</h2>
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#d99a7b;--p2:#f0c6ad" aria-hidden="true"><use href="#sprig"/></svg>
+        <p class="soon">October 2025</p>
+      </div>
+      <span class="page-num">11</span>
+    </div>
+
+    <!-- 14 · Chapter III story -->
+    <div class="page paper story">
+      <div class="page-inner">
+        <p class="lead">Halloween night.</p>
+        <p>I was at another party, at my friend Giannis' place, when you texted me about your friends' party. I got so excited.</p>
+        <p>The next day you texted again with all the details. My friend couldn't come, and I was too shy to go alone.</p>
+        <p>But I really wanted to see you.</p>
+        <p class="aside">So I went.</p>
+        <svg class="fl corner-sprig" viewBox="0 0 100 150" style="--p:#d99a7b;--p2:#f0c6ad" aria-hidden="true"><use href="#sprig"/></svg>
+      </div>
+      <span class="page-num">12</span>
+    </div>
+
+    <!-- 15 · Costumes -->
+    <div class="page paper costumes">
+      <div class="page-inner center">
+        <p class="small-caps">The costumes</p>
+        <div class="pair">
+          <figure>
+            <svg viewBox="0 0 170 120" aria-hidden="true">
+              <g class="smoke"><path d="M160 44 C 150 30, 168 22, 156 8"/><path d="M164 40 C 176 28, 166 18, 176 6"/></g>
+              <path d="M32 66 C 8 58, 6 88, 34 84" fill="none" stroke="#c79f55" stroke-width="6" stroke-linecap="round"/>
+              <path d="M118 68 C 138 62, 148 50, 164 44 C 158 54, 148 68, 122 82Z" fill="url(#gold)"/>
+              <path d="M30 72 C 30 52, 122 52, 126 72 C 128 86, 110 96, 78 96 C 46 96, 30 86, 30 72Z" fill="url(#gold)"/>
+              <ellipse cx="78" cy="56" rx="24" ry="6" fill="#c79f55"/>
+              <circle cx="78" cy="46" r="6" fill="url(#gold)"/>
+              <rect x="60" y="94" width="36" height="9" rx="3" fill="#c79f55"/>
+              <path d="M44 70 C 60 64, 96 64, 112 70" fill="none" stroke="#fff" stroke-width="2" opacity=".45" stroke-linecap="round"/>
+            </svg>
+            <figcaption>I was <b>Aladdin</b></figcaption>
+          </figure>
+          <span class="amp">&amp;</span>
+          <figure>
+            <svg viewBox="0 0 100 120" aria-hidden="true">
+              <path d="M50 38 C 30 26, 6 38, 10 66 C 14 96, 36 112, 50 104 C 64 112, 86 96, 90 66 C 94 38, 70 26, 50 38Z" fill="#c8323a"/>
+              <ellipse cx="30" cy="58" rx="6" ry="12" fill="#fff" opacity=".3" transform="rotate(20 30 58)"/>
+              <path d="M50 38 C 50 26, 54 18, 58 12" fill="none" stroke="#6b4a32" stroke-width="3" stroke-linecap="round"/>
+              <use href="#leaf" x="58" y="6" width="12" height="24" transform="rotate(62 64 18)"/>
+            </svg>
+            <figcaption>You were <b>Snow White</b></figcaption>
+          </figure>
+        </div>
+        <p class="hot">And you looked so hot.</p>
+      </div>
+      <span class="page-num">13</span>
+    </div>
+
+    <!-- 16 · Your friends -->
+    <div class="page paper story">
+      <div class="page-inner">
+        <p class="lead">We talked for a bit,</p>
+        <p>and then your friends came over and asked me if I was single.</p>
+        <p class="aside">Hmm. Something is going on here.</p>
+        <svg class="fl corner-sprig" viewBox="0 0 100 150" style="--p:#c86b79;--p2:#e7a9b2" aria-hidden="true"><use href="#sprig"/></svg>
+      </div>
+      <span class="page-num">14</span>
+    </div>
+
+    <!-- 17 · Jelly shots -->
+    <div class="page paper jelly">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 200 120" aria-hidden="true">
+          <g>
+            <path d="M22 50 Q 44 44 66 50 L 62 100 Q 44 104 26 100Z" fill="#e0535e"/>
+            <path d="M18 30 L 70 30 L 64 106 L 24 106Z" fill="rgba(255,255,255,.35)" stroke="#e1d3cb" stroke-width="1.5"/>
+            <path d="M82 46 Q 104 40 126 46 L 122 100 Q 104 104 86 100Z" fill="#8cc084"/>
+            <path d="M78 26 L 130 26 L 124 106 L 84 106Z" fill="rgba(255,255,255,.35)" stroke="#e1d3cb" stroke-width="1.5"/>
+            <path d="M142 52 Q 164 46 186 52 L 182 100 Q 164 104 146 100Z" fill="#f0a050"/>
+            <path d="M138 32 L 190 32 L 184 106 L 144 106Z" fill="rgba(255,255,255,.35)" stroke="#e1d3cb" stroke-width="1.5"/>
+            <rect x="28" y="36" width="4" height="60" rx="2" fill="#fff" opacity=".55"/>
+            <rect x="88" y="32" width="4" height="64" rx="2" fill="#fff" opacity=".55"/>
+            <rect x="148" y="38" width="4" height="58" rx="2" fill="#fff" opacity=".55"/>
+          </g>
+          <g class="sparkle" fill="#e8c27a">
+            <path d="M76 8 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z"/>
+            <path d="M136 4 l1.5 4.5 4.5 1.5 -4.5 1.5 -1.5 4.5 -1.5 -4.5 -4.5 -1.5 4.5 -1.5z"/>
+          </g>
+        </svg>
+        <p class="lead-c">Then you got a little more flirty.</p>
+        <p class="line">We tried jelly shots together,<br>and you did something I definitely wasn't expecting.</p>
+        <p class="wink">(You know exactly what you did.)</p>
+      </div>
+      <span class="page-num">15</span>
+    </div>
+
+    <!-- 18 · Do you think I'm pretty? -->
+    <div class="page paper pretty">
+      <div class="page-inner center">
+        <p class="line">Later we went to another party.<br>On the way there, and on the way back,<br>you kept looking at me and asking</p>
+        <p class="quote">“Do you think<br>I'm pretty?”</p>
+        <svg class="fl" viewBox="-50 -50 100 100" width="24" height="24" style="--p:#c45c6a;--p2:#e7a9b2" aria-hidden="true"><use href="#flower"/></svg>
+        <p class="yes">Yes. Very.</p>
+      </div>
+      <span class="page-num">16</span>
+    </div>
+
+    <!-- 19 · Talking all night -->
+    <div class="page paper night">
+      <div class="page-inner center">
+        <svg class="illo phone" viewBox="0 0 160 220" aria-hidden="true">
+          <path d="M30 16 A13 13 0 1 0 30 42 A10 10 0 1 1 30 16Z" fill="#e8c27a"/>
+          <g fill="#e8c27a"><circle cx="138" cy="20" r="1.8"/><circle cx="148" cy="48" r="1.3"/><circle cx="14" cy="70" r="1.3"/><circle cx="128" cy="6" r="1"/></g>
+          <rect x="40" y="20" width="84" height="180" rx="15" fill="#2e2522"/>
+          <rect x="46" y="34" width="72" height="152" rx="7" fill="#fdf9f3"/>
+          <rect x="52" y="44" width="40" height="12" rx="6" fill="#ece3dc"/>
+          <rect x="70" y="62" width="42" height="12" rx="6" fill="#c45c6a"/>
+          <rect x="52" y="80" width="32" height="12" rx="6" fill="#ece3dc"/>
+          <rect x="62" y="98" width="50" height="12" rx="6" fill="#c45c6a"/>
+          <rect x="52" y="116" width="44" height="12" rx="6" fill="#ece3dc"/>
+          <rect x="76" y="134" width="36" height="12" rx="6" fill="#c45c6a"/>
+          <rect x="52" y="154" width="28" height="14" rx="7" fill="#ece3dc"/>
+          <g class="typing" fill="#9a8d86"><circle cx="60" cy="161" r="2"/><circle cx="66" cy="161" r="2"/><circle cx="72" cy="161" r="2"/></g>
+        </svg>
+        <p class="lead-c">The moment I got home, you texted me.</p>
+        <p class="line">We talked all night.</p>
+      </div>
+      <span class="page-num">17</span>
+    </div>
+
+    <!-- 20 · The next day -->
+    <div class="page paper story">
+      <div class="page-inner">
+        <p class="lead">The next day,</p>
+        <p>you texted to say sorry, in case you'd made me uncomfortable.</p>
+        <p class="aside">No Sophia, no worries at all.</p>
+        <p>Then, a week later, I texted you to come with us to Greek Night…</p>
+        <svg class="fl corner-sprig" viewBox="0 0 100 150" style="--p:#c9b8de;--p2:#e8def3" aria-hidden="true"><use href="#sprig"/></svg>
+      </div>
+      <span class="page-num">18</span>
+    </div>
+
+    <!-- 21 · Chapter IV (to be written) -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <p class="small-caps">Chapter</p>
+        <div class="num">IV</div>
+        <h2>Greek Night</h2>
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#c45c6a;--p2:#e7a9b2" aria-hidden="true"><use href="#sprig"/></svg>
+        <p class="soon">8 November 2025</p>
+      </div>
+      <span class="page-num">19</span>
+    </div>
+
+    <!-- 22 · Chapter IV story -->
+    <div class="page paper story">
+      <div class="page-inner">
+        <p class="lead">The day it all started.</p>
+        <p>That afternoon I texted you about Greek Night, and a little pregame at my place with Chris.</p>
+        <p>You really wanted to come. I was so excited.</p>
+        <p>Then the night came, and you were at my door.</p>
+        <p class="aside">I was so nervous.</p>
+        <svg class="fl corner-sprig" viewBox="0 0 100 150" style="--p:#c45c6a;--p2:#e7a9b2" aria-hidden="true"><use href="#sprig"/></svg>
+      </div>
+      <span class="page-num">20</span>
+    </div>
+
+    <!-- 23 · Your car -->
+    <div class="page paper ride">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 220 120" aria-hidden="true">
+          <g class="speed" stroke="#d8c8bd" stroke-width="3" stroke-linecap="round">
+            <line x1="4" y1="62" x2="30" y2="62"/><line x1="12" y1="76" x2="34" y2="76"/><line x1="2" y1="90" x2="26" y2="90"/>
+          </g>
+          <g class="car">
+            <path d="M44 92 L 44 72 Q 46 62 60 60 L 82 58 Q 98 36 122 36 L 150 36 Q 166 36 180 56 L 196 60 Q 208 64 208 76 L 208 92 Z" fill="#c45c6a"/>
+            <path d="M92 58 Q 104 42 122 42 L 132 42 L 132 58 Z" fill="#fdf3ef"/>
+            <path d="M138 42 L 150 42 Q 162 42 172 58 L 138 58 Z" fill="#fdf3ef"/>
+            <rect x="196" y="68" width="10" height="6" rx="3" fill="#f3dca3"/>
+            <circle cx="78" cy="94" r="14" fill="#2e2522"/><circle cx="78" cy="94" r="6" fill="#d9cfc8"/>
+            <circle cx="172" cy="94" r="14" fill="#2e2522"/><circle cx="172" cy="94" r="6" fill="#d9cfc8"/>
+          </g>
+          <use class="float-heart" href="#flower" x="118" y="6" width="20" height="20" style="--p:#e9a8b1;--p2:#f6d3d8"/>
+          <line x1="20" y1="110" x2="214" y2="110" stroke="#e6d9cd" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p class="lead-c">A few drinks at my place,</p>
+        <p class="line">then all of us in your car,<br>on the way to Greek Night.</p>
+      </div>
+      <span class="page-num">21</span>
+    </div>
+
+    <!-- 24 · At the bar -->
+    <div class="page paper bar">
+      <div class="page-inner center">
+        <svg class="illo beers" viewBox="0 0 200 130" aria-hidden="true">
+          <g transform="rotate(-12 70 80)">
+            <rect x="40" y="40" width="54" height="76" rx="6" fill="#f3c25a"/>
+            <rect x="40" y="40" width="54" height="76" rx="6" fill="none" stroke="#e1c48a" stroke-width="2"/>
+            <path d="M36 44 Q 40 26 56 30 Q 66 20 78 28 Q 94 24 98 42 Z" fill="#fffaf0"/>
+            <path d="M94 56 Q 116 58 114 80 Q 112 100 94 100" fill="none" stroke="#e1c48a" stroke-width="6"/>
+            <rect x="48" y="50" width="6" height="56" rx="3" fill="#fff" opacity=".4"/>
+          </g>
+          <g transform="rotate(12 130 80)">
+            <rect x="106" y="40" width="54" height="76" rx="6" fill="#f3c25a"/>
+            <rect x="106" y="40" width="54" height="76" rx="6" fill="none" stroke="#e1c48a" stroke-width="2"/>
+            <path d="M102 42 Q 106 24 122 28 Q 134 20 146 28 Q 160 26 164 44 Z" fill="#fffaf0"/>
+            <path d="M106 56 Q 84 58 86 80 Q 88 100 106 100" fill="none" stroke="#e1c48a" stroke-width="6"/>
+            <rect x="114" y="50" width="6" height="56" rx="3" fill="#fff" opacity=".4"/>
+          </g>
+          <g class="sparkle" fill="#e8c27a">
+            <path d="M100 2 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z"/>
+            <path d="M80 12 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5z"/>
+            <path d="M120 12 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5z"/>
+          </g>
+        </svg>
+        <p class="lead-c">By the time we got there,<br>things got very flirty.</p>
+        <p class="line">I kept going to the bar for beers,<br>one for me and one for you,<br>and we talked all night.</p>
+      </div>
+      <span class="page-num">22</span>
+    </div>
+
+    <!-- 25 · I want to kiss you -->
+    <div class="page paper almost">
+      <div class="page-inner center">
+        <p class="sub">At one point we were sitting at a table,<br>touching each other's hands,<br>and I kept telling you</p>
+        <p class="quote">“I want to kiss you<br>so bad.”</p>
+        <p class="sub">But I wanted it to be just us.<br>So I waited.</p>
+      </div>
+      <span class="page-num">23</span>
+    </div>
+
+    <!-- 26 · The text -->
+    <div class="page paper texts">
+      <div class="page-inner center">
+        <p class="line">After the party you drove me home,<br>then Chris.<br>I texted you right away.</p>
+        <div class="chat">
+          <p class="bubble me">Can I come give you a goodnight kiss?</p>
+          <p class="bubble her">Come and find out!</p>
+        </div>
+        <p class="aside-c">So I went.</p>
+      </div>
+      <span class="page-num">24</span>
+    </div>
+
+    <!-- 27 · Next to the car -->
+    <div class="page paper story">
+      <div class="page-inner">
+        <p class="lead">We stood next to my car, talking.</p>
+        <p>I tried to kiss you so many times.</p>
+        <p class="aside">“Noooo, I can't!”</p>
+        <p>you kept saying.</p>
+        <p>Until, at one point…</p>
+        <svg class="fl corner-sprig" viewBox="0 0 100 150" style="--p:#c86b79;--p2:#e7a9b2" aria-hidden="true"><use href="#sprig"/></svg>
+      </div>
+      <span class="page-num">25</span>
+    </div>
+
+    <!-- 28 · The kiss -->
+    <div class="page paper kiss">
+      <div class="page-inner center">
+        <div class="wreath big" id="kissWreath">
+          <div class="kiss-center">
+            <p class="kissed">we kissed.</p>
+            <p class="date">8 · 11 · 2025</p>
+          </div>
+        </div>
+        <p class="line">I can't forget that kiss.<br>You're an amazing kisser,<br>and your lips were so soft.</p>
+      </div>
+      <span class="page-num">26</span>
+    </div>
+
+    <!-- 29 · Sunrise -->
+    <div class="page paper sunrise">
+      <div class="page-inner center">
+        <svg class="illo sun" viewBox="0 0 200 100" aria-hidden="true">
+          <defs><clipPath id="horizon"><rect x="0" y="0" width="200" height="74"/></clipPath></defs>
+          <g clip-path="url(#horizon)">
+            <g class="rays" stroke="#f0c27a" stroke-width="3" stroke-linecap="round">
+              <line x1="100" y1="20" x2="100" y2="6"/><line x1="64" y1="34" x2="54" y2="24"/><line x1="136" y1="34" x2="146" y2="24"/>
+              <line x1="48" y1="56" x2="34" y2="52"/><line x1="152" y1="56" x2="166" y2="52"/>
+            </g>
+            <circle cx="100" cy="76" r="40" fill="#f6b48a"/>
+            <circle cx="100" cy="76" r="30" fill="#f8c79c"/>
+          </g>
+          <line x1="10" y1="74" x2="190" y2="74" stroke="#e6d9cd" stroke-width="2" stroke-linecap="round"/>
+          <line x1="40" y1="84" x2="160" y2="84" stroke="#efe5dc" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p class="line">We went upstairs,<br>and at some point we fell asleep together.</p>
+        <p class="line">I left around 6am.</p>
+        <p class="wink">(Sorry, baby.)</p>
+        <p class="lead-c">The next day we kept talking,<br>and from there, everything took its way.</p>
+      </div>
+      <span class="page-num">27</span>
+    </div>
+
+    <!-- 30 · Chapter V opener -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <p class="small-caps">Chapter</p>
+        <div class="num">V</div>
+        <h2>The first weeks</h2>
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#c9b8de;--p2:#e8def3" aria-hidden="true"><use href="#sprig"/></svg>
+        <p class="soon">November 2025</p>
+      </div>
+      <span class="page-num">28</span>
+    </div>
+
+    <!-- 31 · BBQ -->
+    <div class="page paper bbq">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 200 150" aria-hidden="true">
+          <g class="smoke-bbq" fill="none" stroke="#d8ccc4" stroke-width="3" stroke-linecap="round">
+            <path d="M80 44 C 70 30, 90 22, 80 6"/><path d="M104 40 C 114 26, 94 18, 106 2"/><path d="M128 44 C 118 30, 138 22, 126 8"/>
+          </g>
+          <rect x="62" y="52" width="26" height="9" rx="4.5" fill="#b5505f"/>
+          <rect x="94" y="50" width="26" height="9" rx="4.5" fill="#9c4855"/>
+          <rect x="124" y="53" width="22" height="9" rx="4.5" fill="#b5505f"/>
+          <path d="M44 62 L 156 62" stroke="#8d807a" stroke-width="3" stroke-linecap="round"/>
+          <path d="M40 64 Q 100 132 160 64 Z" fill="#2e2522"/>
+          <path d="M58 76 Q 100 112 142 76" fill="none" stroke="#4a3f3b" stroke-width="2"/>
+          <g stroke="#2e2522" stroke-width="4" stroke-linecap="round">
+            <line x1="76" y1="104" x2="62" y2="142"/><line x1="124" y1="104" x2="138" y2="142"/><line x1="100" y1="110" x2="100" y2="142"/>
+          </g>
+          <circle cx="62" cy="142" r="5" fill="#8d807a"/><circle cx="138" cy="142" r="5" fill="#8d807a"/>
+          <use href="#flower" x="164" y="118" width="22" height="22" style="--p:#efbd9f;--p2:#f8dccb"/>
+          <use href="#leaf" x="156" y="124" width="8" height="18" transform="rotate(-40 160 133)"/>
+        </svg>
+        <p class="lead-c">A few days later,<br>I organised a BBQ at my place.</p>
+        <p class="line">You came with Bella,<br>and we had so much fun.</p>
+      </div>
+      <span class="page-num">29</span>
+    </div>
+
+    <!-- 32 · Her birthday -->
+    <div class="page paper bday">
+      <div class="page-inner center">
+        <svg class="illo cake" viewBox="0 0 200 160" aria-hidden="true">
+          <g class="flames" fill="#f3b04a">
+            <path d="M70 26 C 64 36, 68 44, 72 44 C 76 44, 80 36, 72 26 Z"/>
+            <path d="M100 18 C 94 28, 98 36, 102 36 C 106 36, 110 28, 102 18 Z"/>
+            <path d="M130 26 C 124 36, 128 44, 132 44 C 136 44, 140 36, 132 26 Z"/>
+          </g>
+          <rect x="68" y="44" width="8" height="28" rx="2" fill="#c9b8de"/>
+          <rect x="98" y="36" width="8" height="36" rx="2" fill="#e9a8b1"/>
+          <rect x="128" y="44" width="8" height="28" rx="2" fill="#c9b8de"/>
+          <rect x="40" y="70" width="124" height="66" rx="10" fill="#fbeee6"/>
+          <path d="M40 82 Q 40 70 52 70 L 152 70 Q 164 70 164 82 L 164 88 Q 156 98 148 88 Q 140 100 130 88 Q 120 100 110 88 Q 100 100 90 88 Q 80 100 70 88 Q 60 100 52 88 Q 46 96 40 88 Z" fill="#e9a8b1"/>
+          <use href="#flower" x="56" y="104" width="18" height="18" style="--p:#c45c6a;--p2:#e7a9b2"/>
+          <use href="#flower" x="94" y="108" width="16" height="16" style="--p:#c9b8de;--p2:#e8def3"/>
+          <use href="#flower" x="130" y="104" width="18" height="18" style="--p:#efbd9f;--p2:#f8dccb"/>
+          <ellipse cx="102" cy="140" rx="80" ry="8" fill="#ece3dc"/>
+        </svg>
+        <p class="lead-c">A week later, it was your birthday.</p>
+        <p class="line">We had so much fun,<br>and for the first time</p>
+        <p class="quote-s">we kissed in public.</p>
+      </div>
+      <span class="page-num">30</span>
+    </div>
+
+    <!-- 33 · First nights at mine -->
+    <div class="page paper home">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 200 150" aria-hidden="true">
+          <path d="M160 14 A14 14 0 1 0 160 42 A11 11 0 1 1 160 14Z" fill="#e8c27a"/>
+          <g fill="#e8c27a"><circle cx="30" cy="20" r="1.8"/><circle cx="56" cy="8" r="1.2"/><circle cx="184" cy="56" r="1.4"/><circle cx="18" cy="52" r="1.2"/></g>
+          <g class="chimney-smoke" fill="none" stroke="#d8ccc4" stroke-width="3" stroke-linecap="round"><path d="M128 34 C 120 24, 136 18, 128 6"/></g>
+          <rect x="120" y="36" width="14" height="26" fill="#9c4855"/>
+          <path d="M44 74 L 100 30 L 156 74 Z" fill="#b5505f"/>
+          <rect x="54" y="72" width="92" height="66" fill="#fbeee6"/>
+          <rect x="66" y="86" width="28" height="24" rx="2" fill="#f6cf7e" class="window"/>
+          <path d="M80 86 L 80 110 M 66 98 L 94 98" stroke="#e7b860" stroke-width="2"/>
+          <rect x="108" y="98" width="24" height="40" rx="2" fill="#9c4855"/>
+          <circle cx="127" cy="119" r="1.8" fill="#f3dca3"/>
+          <use href="#flower" x="36" y="122" width="18" height="18" style="--p:#e9a8b1;--p2:#f6d3d8"/>
+          <use href="#flower" x="148" y="124" width="16" height="16" style="--p:#c9b8de;--p2:#e8def3"/>
+          <line x1="20" y1="140" x2="180" y2="140" stroke="#e6d9cd" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p class="lead-c">And for the first time,<br>you stayed at my place for a few nights.</p>
+        <p class="line">It was so nice.</p>
+      </div>
+      <span class="page-num">31</span>
+    </div>
+
+    <!-- 34 · Chapter VI opener -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <p class="small-caps">Chapter</p>
+        <div class="num">VI</div>
+        <h2>Officially</h2>
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#e9a8b1;--p2:#f6d3d8" aria-hidden="true"><use href="#sprig"/></svg>
+        <p class="soon">Winter – Spring 2026</p>
+      </div>
+      <span class="page-num">32</span>
+    </div>
+
+    <!-- 35 · Already dating -->
+    <div class="page paper story">
+      <div class="page-inner">
+        <p class="lead">Then, without really saying it, we started dating.</p>
+        <p>In my head we were already a couple, so I never actually asked you.</p>
+        <p class="aside">(More on that later.)</p>
+        <svg class="fl corner-sprig" viewBox="0 0 100 150" style="--p:#e9a8b1;--p2:#f6d3d8" aria-hidden="true"><use href="#sprig"/></svg>
+      </div>
+      <span class="page-num">33</span>
+    </div>
+
+    <!-- 36 · Sakura -->
+    <div class="page paper sushi">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 220 130" aria-hidden="true">
+          <rect x="20" y="62" width="170" height="42" rx="6" fill="#d9b48a"/>
+          <rect x="30" y="104" width="12" height="10" rx="2" fill="#c49b6e"/><rect x="168" y="104" width="12" height="10" rx="2" fill="#c49b6e"/>
+          <!-- nigiri -->
+          <rect x="36" y="48" width="44" height="20" rx="10" fill="#fffaf2"/>
+          <path d="M32 50 Q 34 36 58 36 Q 82 36 84 50 Q 70 46 58 46 Q 44 46 32 50Z" fill="#f2946b"/>
+          <path d="M44 40 L 48 46 M56 38 L 58 46 M68 39 L 66 46" stroke="#fbc7ad" stroke-width="2" stroke-linecap="round"/>
+          <!-- maki -->
+          <g><circle cx="106" cy="54" r="15" fill="#2f3b2c"/><circle cx="106" cy="54" r="11" fill="#fffaf2"/><circle cx="106" cy="54" r="5" fill="#f08a8a"/></g>
+          <g><circle cx="140" cy="54" r="15" fill="#2f3b2c"/><circle cx="140" cy="54" r="11" fill="#fffaf2"/><circle cx="140" cy="54" r="5" fill="#8cc084"/></g>
+          <!-- soy dish -->
+          <ellipse cx="200" cy="96" rx="16" ry="6" fill="#efe5dc"/><ellipse cx="200" cy="95" rx="10" ry="3.5" fill="#6b4a32"/>
+          <!-- chopsticks -->
+          <line x1="96" y1="16" x2="200" y2="40" stroke="#b07a4a" stroke-width="4" stroke-linecap="round"/>
+          <line x1="100" y1="8" x2="204" y2="30" stroke="#b07a4a" stroke-width="4" stroke-linecap="round"/>
+          <use href="#flower" x="164" y="66" width="18" height="18" style="--p:#e9a8b1;--p2:#f6d3d8"/>
+        </svg>
+        <p class="small-caps">Our first date</p>
+        <p class="lead-c">Sakura.<br>Sushi, your favourite.</p>
+        <p class="line">You were dressed so nice,<br>and you looked so pretty.</p>
+      </div>
+      <span class="page-num">34</span>
+    </div>
+
+    <!-- 37 · Sweatpants -->
+    <div class="page paper sweats">
+      <div class="page-inner center">
+        <svg class="illo pants" viewBox="0 0 120 150" aria-hidden="true">
+          <rect x="22" y="10" width="76" height="16" rx="4" fill="#9a9592"/>
+          <path d="M22 24 L 98 24 L 102 132 L 66 132 L 60 62 L 54 132 L 18 132 Z" fill="#b3aeab"/>
+          <rect x="18" y="128" width="36" height="12" rx="4" fill="#9a9592"/><rect x="66" y="128" width="36" height="12" rx="4" fill="#9a9592"/>
+          <path d="M56 26 Q 52 40 48 46 M64 26 Q 68 40 72 46" stroke="#f1ece8" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path d="M30 40 Q 40 46 42 60" stroke="#a19c99" stroke-width="2" fill="none"/>
+        </svg>
+        <p class="lead-c">And I showed up in sweatpants.</p>
+        <p class="wink">(OMG.)</p>
+        <p class="line">We still had so much fun.</p>
+      </div>
+      <span class="page-num">35</span>
+    </div>
+
+    <!-- 38 · Christmas apart -->
+    <div class="page paper xmas">
+      <div class="page-inner center">
+        <svg class="illo tree" viewBox="0 0 140 160" aria-hidden="true">
+          <path d="M70 4 l3.5 8 8.5 1 -6.5 5.5 2 8.5 -7.5 -4.5 -7.5 4.5 2 -8.5 -6.5 -5.5 8.5 -1z" fill="#e8c27a" class="star"/>
+          <path d="M70 26 L 100 66 L 40 66 Z" fill="#87a382"/>
+          <path d="M70 48 L 110 100 L 30 100 Z" fill="#7a9876"/>
+          <path d="M70 76 L 120 136 L 20 136 Z" fill="#6d8c69"/>
+          <rect x="62" y="136" width="16" height="16" rx="2" fill="#9b7653"/>
+          <g fill="#c45c6a"><circle cx="58" cy="58" r="3.5"/><circle cx="84" cy="88" r="3.5"/><circle cx="50" cy="118" r="3.5"/><circle cx="92" cy="124" r="3.5"/></g>
+          <g fill="#f3dca3"><circle cx="78" cy="56" r="3"/><circle cx="56" cy="92" r="3"/><circle cx="74" cy="118" r="3"/></g>
+        </svg>
+        <p class="line">From then on, every time we were together felt special.</p>
+        <p class="lead-c">Then Christmas came.</p>
+        <p class="line">You went to your parents in Greenville,<br>and we spent two and a half weeks apart.<br>We still talked every day, and had so much fun.</p>
+      </div>
+      <span class="page-num">36</span>
+    </div>
+
+    <!-- 39 · Will you be my girlfriend? -->
+    <div class="page paper invite">
+      <div class="page-inner center">
+        <p class="intro-line">When you got back, we spent even more time together.<br>And then, finally, I asked you.</p>
+        <div class="card">
+          <p class="small-caps">Officially</p>
+          <p class="what">Will you be<br>my girlfriend?</p>
+          <span class="stamp">Yes</span>
+        </div>
+        <p class="after"><em>I know you waited a long time for that one.</em><br>Sorry, baby.</p>
+      </div>
+      <span class="page-num">37</span>
+    </div>
+
+    <!-- 40 · My family -->
+    <div class="page paper family">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 220 140" aria-hidden="true">
+          <g fill="none" stroke="#87a382" stroke-width="2.4" stroke-linecap="round">
+            <path d="M40 136 C 40 110, 36 90, 38 64"/><path d="M76 136 C 76 100, 80 76, 78 44"/><path d="M112 136 C 112 104, 108 80, 110 54"/>
+            <path d="M148 136 C 148 100, 152 76, 150 40"/><path d="M184 136 C 184 112, 180 92, 182 70"/>
+          </g>
+          <use href="#leaf" x="42" y="96" width="10" height="20" transform="rotate(50 47 106)"/>
+          <use href="#leaf" x="66" y="98" width="10" height="20" transform="rotate(-50 71 108)"/>
+          <use href="#leaf" x="114" y="94" width="10" height="20" transform="rotate(50 119 104)"/>
+          <use href="#leaf" x="138" y="96" width="10" height="20" transform="rotate(-50 143 106)"/>
+          <use href="#leaf" x="172" y="104" width="10" height="20" transform="rotate(-50 177 114)"/>
+          <use href="#flower" x="24" y="50" width="28" height="28" style="--p:#efbd9f;--p2:#f8dccb"/>
+          <use href="#flower" x="62" y="28" width="32" height="32" style="--p:#c9b8de;--p2:#e8def3"/>
+          <use href="#flower" x="92" y="36" width="36" height="36" style="--p:#c45c6a;--p2:#e7a9b2"/>
+          <use href="#flower" x="134" y="24" width="32" height="32" style="--p:#f1d7b8;--p2:#fbeedd"/>
+          <use href="#flower" x="168" y="56" width="28" height="28" style="--p:#e9a8b1;--p2:#f6d3d8"/>
+        </svg>
+        <p class="lead-c">In April, my family came to visit,<br>and you met them.</p>
+        <p class="line">They all loved you.</p>
+        <p class="wink">How could anyone not? You're the cutest.</p>
+      </div>
+      <span class="page-num">38</span>
+    </div>
+
+    <!-- 41 · Chapter VII opener -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <p class="small-caps">Chapter</p>
+        <div class="num">VII</div>
+        <h2>Home</h2>
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#f1d7b8;--p2:#fbeedd" aria-hidden="true"><use href="#sprig"/></svg>
+        <p class="soon">May – June 2026</p>
+      </div>
+      <span class="page-num">39</span>
+    </div>
+
+    <!-- 42 · Our days at my place -->
+    <div class="page paper cooking">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 220 120" aria-hidden="true">
+          <g class="steam" fill="none" stroke="#d8ccc4" stroke-width="3" stroke-linecap="round">
+            <path d="M74 40 C 66 28, 82 22, 74 8"/><path d="M98 36 C 106 24, 90 18, 100 4"/><path d="M122 40 C 114 28, 130 22, 122 8"/>
+          </g>
+          <path d="M40 58 L 160 58 Q 156 96 128 100 L 72 100 Q 44 96 40 58Z" fill="#3a3330"/>
+          <rect x="36" y="52" width="128" height="8" rx="4" fill="#4a423e"/>
+          <rect x="160" y="54" width="54" height="8" rx="4" fill="#9b7653"/>
+          <g><circle cx="70" cy="56" r="6" fill="#e0535e"/><circle cx="90" cy="54" r="5" fill="#8cc084"/><circle cx="108" cy="56" r="6" fill="#f3c25a"/><circle cx="128" cy="54" r="5" fill="#e0535e"/></g>
+          <ellipse cx="100" cy="112" rx="70" ry="5" fill="#ece3dc"/>
+        </svg>
+        <p class="line">Half of May and June, you stayed at my place,<br>and it was amazing.</p>
+        <p class="lead-c">Waking up next to each other.<br>Falling asleep next to each other.<br>Cooking dinner together.</p>
+      </div>
+      <span class="page-num">40</span>
+    </div>
+
+    <!-- 43 · The realisation -->
+    <div class="page paper almost">
+      <div class="page-inner center">
+        <svg class="fl" viewBox="-50 -50 100 100" width="28" height="28" style="--p:#c45c6a;--p2:#e7a9b2" aria-hidden="true"><use href="#flower"/></svg>
+        <p class="sub">Those were the days I realised</p>
+        <p class="quote">I want to spend my life with you.</p>
+      </div>
+      <span class="page-num">41</span>
+    </div>
+
+    <!-- Greenville: meeting her parents -->
+    <div class="page paper story">
+      <div class="page-inner">
+        <p class="lead">Before we left, I came to Greenville.</p>
+        <p>To visit you, and to meet your parents. My first time ever meeting a girlfriend's parents.</p>
+        <p class="aside">I was super nervous.</p>
+        <p>But also so excited, because I really wanted to do it with you.</p>
+        <svg class="fl corner-sprig" viewBox="0 0 100 150" style="--p:#efbd9f;--p2:#f8dccb" aria-hidden="true"><use href="#sprig"/></svg>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- Greenville: dinners -->
+    <div class="page paper dinner">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 220 130" aria-hidden="true">
+          <!-- vase with flowers -->
+          <path d="M100 98 Q 96 80 104 72 L 116 72 Q 124 80 120 98 Z" fill="#c9b8de" opacity=".8"/>
+          <g fill="none" stroke="#87a382" stroke-width="2" stroke-linecap="round"><path d="M110 72 L 110 40"/><path d="M108 72 C 104 60, 96 54, 92 46"/><path d="M112 72 C 116 60, 124 54, 128 46"/></g>
+          <use href="#flower" x="98" y="20" width="24" height="24" style="--p:#c45c6a;--p2:#e7a9b2"/>
+          <use href="#flower" x="80" y="34" width="20" height="20" style="--p:#e9a8b1;--p2:#f6d3d8"/>
+          <use href="#flower" x="120" y="34" width="20" height="20" style="--p:#f1d7b8;--p2:#fbeedd"/>
+          <!-- candle -->
+          <rect x="62" y="74" width="8" height="24" rx="2" fill="#fbeee6" stroke="#e6d9cd"/>
+          <path class="candle" d="M66 60 C 62 66, 63 72, 66 72 C 69 72, 70 66, 66 60 Z" fill="#f3b04a"/>
+          <!-- wine glasses -->
+          <g fill="none" stroke="#cdbfb6" stroke-width="2"><path d="M30 60 Q 30 80 40 82 Q 50 80 50 60 Z"/><path d="M40 82 L 40 96 M 32 98 L 48 98"/></g>
+          <path d="M31 70 Q 32 80 40 81 Q 48 80 49 70 Z" fill="#9c4855" opacity=".75"/>
+          <g fill="none" stroke="#cdbfb6" stroke-width="2"><path d="M170 60 Q 170 80 180 82 Q 190 80 190 60 Z"/><path d="M180 82 L 180 96 M 172 98 L 188 98"/></g>
+          <path d="M171 70 Q 172 80 180 81 Q 188 80 189 70 Z" fill="#9c4855" opacity=".75"/>
+          <!-- plates & table -->
+          <ellipse cx="146" cy="96" rx="18" ry="4" fill="#fff" stroke="#e6d9cd"/>
+          <rect x="10" y="98" width="200" height="6" rx="3" fill="#e6d9cd"/>
+          <path d="M20 104 L 20 126 M200 104 L 200 126" stroke="#d8ccc4" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <p class="lead-c">Your family was so nice to me,<br>and every dinner was amazing.</p>
+        <p class="line">We did so many things.<br>I had so much fun in Greenville.</p>
+        <p class="quote-s">I can't wait to go back.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- 21 June -->
+    <div class="page paper parting">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 220 120" aria-hidden="true">
+          <path d="M110 112 C 90 80, 60 50, 26 36" fill="none" stroke="#c45c6a" stroke-width="1.6" stroke-dasharray="3 5" stroke-linecap="round"/>
+          <path d="M110 112 C 130 80, 160 50, 194 36" fill="none" stroke="#c45c6a" stroke-width="1.6" stroke-dasharray="3 5" stroke-linecap="round"/>
+          <g fill="#2e2522" transform="translate(26 34) rotate(200) scale(1.5)">
+            <path d="M-10 -1.4 L6 -1.4 Q 11 0 6 1.4 L-10 1.4 Z"/><path d="M-1 0 L-6 -9 L-2.5 -9 L4 0 L-2.5 9 L-6 9 Z"/><path d="M-9 0 L-12 -4.5 L-10 -4.5 L-6 0 L-10 4.5 L-12 4.5 Z"/>
+          </g>
+          <g fill="#2e2522" transform="translate(194 34) rotate(-20) scale(1.5)">
+            <path d="M-10 -1.4 L6 -1.4 Q 11 0 6 1.4 L-10 1.4 Z"/><path d="M-1 0 L-6 -9 L-2.5 -9 L4 0 L-2.5 9 L-6 9 Z"/><path d="M-9 0 L-12 -4.5 L-10 -4.5 L-6 0 L-10 4.5 L-12 4.5 Z"/>
+          </g>
+          <text x="22" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#8d807a">Greece</text>
+          <text x="198" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#8d807a">Italy</text>
+          <use href="#flower" x="102" y="104" width="16" height="16" style="--p:#c45c6a;--p2:#e7a9b2"/>
+        </svg>
+        <p class="line">As summer came, we got sad.<br>We knew we'd be apart.</p>
+        <p class="lead-c">On the 21st of June, I left for Greece<br>and you left for Italy.</p>
+        <p class="line">But we knew we'd see each other soon.</p>
+        <p class="wink">At the beginning of August, you came to Greece…</p>
+      </div>
+      <span class="page-num">42</span>
+    </div>
+
+    <!-- 45 · Chapter VIII (to be written) -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <p class="small-caps">Chapter</p>
+        <div class="num">VIII</div>
+        <h2>Greece</h2>
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#9fc0d8;--p2:#d6e6f1" aria-hidden="true"><use href="#sprig"/></svg>
+        <p class="soon">August 2026</p>
+      </div>
+      <span class="page-num">43</span>
+    </div>
+
+    <!-- Greece: the airport -->
+    <div class="page paper airport">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 220 110" aria-hidden="true">
+          <path d="M20 20 C 70 30, 120 60, 160 86" fill="none" stroke="#c45c6a" stroke-width="1.6" stroke-dasharray="3 5" stroke-linecap="round"/>
+          <g fill="#2e2522" transform="translate(166 88) rotate(26) scale(2.2)">
+            <path d="M-10 -1.4 L6 -1.4 Q 11 0 6 1.4 L-10 1.4 Z"/><path d="M-1 0 L-6 -9 L-2.5 -9 L4 0 L-2.5 9 L-6 9 Z"/><path d="M-9 0 L-12 -4.5 L-10 -4.5 L-6 0 L-10 4.5 L-12 4.5 Z"/>
+          </g>
+          <line x1="110" y1="104" x2="214" y2="104" stroke="#d8ccc4" stroke-width="3" stroke-linecap="round"/>
+          <g stroke="#fff" stroke-width="2"><line x1="124" y1="104" x2="134" y2="104"/><line x1="150" y1="104" x2="160" y2="104"/><line x1="176" y1="104" x2="186" y2="104"/></g>
+          <use href="#flower" x="14" y="80" width="20" height="20" style="--p:#c45c6a;--p2:#e7a9b2"/>
+          <use href="#flower" x="34" y="88" width="14" height="14" style="--p:#e9a8b1;--p2:#f6d3d8"/>
+        </svg>
+        <p class="lead-c">I came to pick you up from the airport,<br>and I was so nervous.</p>
+        <p class="line">When I saw you, I couldn't believe<br>you were really there.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- Greece: home -->
+    <div class="page paper ghome">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 220 140" aria-hidden="true">
+          <circle cx="182" cy="28" r="14" fill="#f6c27a"/>
+          <rect x="0" y="92" width="220" height="48" fill="#cfe2ee"/>
+          <path d="M0 100 Q 20 96 40 100 T 80 100 T 120 100 T 160 100 T 200 100 T 240 100" fill="none" stroke="#fff" stroke-width="2" opacity=".8"/>
+          <rect x="64" y="56" width="96" height="66" fill="#fffdf8" stroke="#ece3dc"/>
+          <path d="M76 56 A 20 20 0 0 1 116 56 Z" fill="#3f6fa0"/>
+          <rect x="94" y="30" width="2" height="8" fill="#3f6fa0"/><rect x="91" y="32" width="8" height="2" fill="#3f6fa0"/>
+          <rect x="102" y="88" width="18" height="34" rx="9" fill="#3f6fa0"/>
+          <rect x="76" y="72" width="16" height="16" fill="#3f6fa0"/><rect x="132" y="72" width="16" height="16" fill="#3f6fa0"/>
+          <g fill="#d6578a"><circle cx="156" cy="56" r="5"/><circle cx="164" cy="62" r="5"/><circle cx="150" cy="64" r="4"/><circle cx="160" cy="72" r="5"/><circle cx="168" cy="54" r="4"/><circle cx="154" cy="78" r="4"/><circle cx="166" cy="82" r="3.5"/></g>
+          <use href="#leaf" x="168" y="66" width="8" height="16" transform="rotate(40 172 74)"/>
+          <rect x="50" y="122" width="124" height="6" fill="#ece3dc"/>
+        </svg>
+        <p class="lead-c">Then we headed home.</p>
+        <p class="line">You were very nervous too,<br>but my family loved you so, so much.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- Greece: every day -->
+    <div class="page paper days">
+      <div class="page-inner center">
+        <p class="small-caps">Every single day</p>
+        <div class="loop">
+          <figure>
+            <svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="32" r="22" fill="#fff" stroke="#e6d9cd" stroke-width="2"/><circle cx="30" cy="32" r="14" fill="#f6efe9"/><circle cx="25" cy="30" r="4" fill="#e0535e"/><circle cx="34" cy="34" r="4" fill="#8cc084"/><circle cx="31" cy="26" r="3" fill="#f3c25a"/></svg>
+            <figcaption>eating</figcaption>
+          </figure>
+          <span class="arrow">→</span>
+          <figure>
+            <svg viewBox="0 0 60 60" aria-hidden="true"><path d="M8 26 Q 30 2 52 26 Z" fill="#c45c6a"/><line x1="30" y1="14" x2="34" y2="50" stroke="#8d807a" stroke-width="2"/><path d="M0 50 Q 10 44 20 50 T 40 50 T 60 50" fill="none" stroke="#7fb2d1" stroke-width="3"/><path d="M0 57 Q 10 51 20 57 T 40 57 T 60 57" fill="none" stroke="#a9cde2" stroke-width="3"/></svg>
+            <figcaption>the beach</figcaption>
+          </figure>
+          <span class="arrow">→</span>
+          <figure>
+            <svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="32" r="22" fill="#fff" stroke="#e6d9cd" stroke-width="2"/><circle cx="30" cy="32" r="14" fill="#f6efe9"/><circle cx="27" cy="30" r="4" fill="#f3c25a"/><circle cx="35" cy="31" r="4" fill="#e0535e"/><circle cx="28" cy="37" r="3" fill="#8cc084"/></svg>
+            <figcaption>eating again</figcaption>
+          </figure>
+        </div>
+        <p class="lead-c">We had so much fun.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- Greece: where I grew up -->
+    <div class="page paper almost">
+      <div class="page-inner center">
+        <svg class="fl" viewBox="-50 -50 100 100" width="26" height="26" style="--p:#9fc0d8;--p2:#d6e6f1" aria-hidden="true"><use href="#flower"/></svg>
+        <p class="sub">I'm so glad you got to meet<br>my family and my friends,</p>
+        <p class="quote">in the place<br>I grew up.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- Greece: goodbye -->
+    <div class="page paper almost">
+      <div class="page-inner center">
+        <p class="sub">The day you left, we were so sad.<br>Seeing you cry made me feel terrible.</p>
+        <p class="quote">Bye,<br>until we meet again.</p>
+        <svg class="fl" viewBox="-50 -50 100 100" width="22" height="22" style="--p:#c9b8de;--p2:#e8def3" aria-hidden="true"><use href="#flower"/></svg>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- Chapter IX opener -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <p class="small-caps">Chapter</p>
+        <div class="num">IX</div>
+        <h2>Athens</h2>
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#f1d7b8;--p2:#fbeedd;--lf:#9aa77a" aria-hidden="true"><use href="#sprig"/></svg>
+        <p class="soon">September 2026</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- Athens: her visit -->
+    <div class="page paper athens">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 200 120" aria-hidden="true">
+          <circle cx="150" cy="34" r="16" fill="#f6c27a" opacity=".8"/>
+          <path d="M40 46 L 100 22 L 160 46 Z" fill="#eadfcd"/>
+          <rect x="36" y="46" width="128" height="10" fill="#e3d5bf"/>
+          <g fill="#efe5d4"><rect x="44" y="58" width="10" height="44"/><rect x="66" y="58" width="10" height="44"/><rect x="88" y="58" width="10" height="44"/><rect x="110" y="58" width="10" height="44"/><rect x="132" y="58" width="10" height="44"/><rect x="146" y="58" width="10" height="44" opacity="0"/></g>
+          <rect x="30" y="102" width="140" height="7" fill="#e3d5bf"/><rect x="24" y="109" width="152" height="7" fill="#d8c9b1"/>
+          <use href="#leaf" x="176" y="80" width="10" height="20" transform="rotate(30 181 90)" style="--lf:#9aa77a"/>
+          <use href="#leaf" x="14" y="82" width="10" height="20" transform="rotate(-30 19 92)" style="--lf:#9aa77a"/>
+        </svg>
+        <p class="line">Not even a month later, I got a job in Athens.</p>
+        <p class="lead-c">And you came to visit me for a week,<br>before you started your master's.</p>
+        <p class="line">Another perfect week with you in Greece.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- Long distance -->
+    <div class="page paper distance">
+      <div class="page-inner center">
+        <svg class="illo" viewBox="0 0 220 70" aria-hidden="true">
+          <path d="M30 40 Q 110 0 190 40" fill="none" stroke="#c45c6a" stroke-width="1.6" stroke-dasharray="3 5" stroke-linecap="round"/>
+          <circle cx="30" cy="40" r="5" fill="#c45c6a"/><circle cx="190" cy="40" r="5" fill="#c45c6a"/>
+          <text x="30" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#8d807a">Athens</text>
+          <text x="190" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#8d807a">Italy</text>
+          <use class="beat" href="#flower" x="100" y="10" width="20" height="20" style="--p:#c45c6a;--p2:#e7a9b2"/>
+        </svg>
+        <p class="line">Then you went back to Italy for school,<br>and I went to Athens for work.<br>Long distance had really started.</p>
+        <p class="quote-s">But I'm sure about us.</p>
+        <p class="lead-c">We'll make it work. 100%.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- Our year in pictures -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#efbd9f;--p2:#f8dccb" aria-hidden="true"><use href="#sprig"/></svg>
+        <h2>Our year in pictures</h2>
+        <p class="soon">a few of my favourites</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <div class="page paper photos">
+      <div class="page-inner">
+        <figure class="snap"><img src="photos/00ceaed8-7a8f-4088-91e5-4952d3b0d1b8.JPG" alt="Sophia smiling at a table with a bucket of drinks" style="object-position:40% 35%"><figcaption>That smile.</figcaption></figure>
+        <figure class="snap"><img src="photos/IMG_7393.jpeg" alt="Sophia grinning next to a table full of empty bottles" style="object-position:20% 55%"><figcaption>We may have had a few.</figcaption></figure>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <div class="page paper photos">
+      <div class="page-inner">
+        <figure class="snap wide"><img src="photos/e4434afa-1335-4e05-a376-55d6b99a35c8.JPG" alt="Sophia and Dimitris making the same face while eating sandwiches"><figcaption>Matching faces. Matching sandwiches.</figcaption></figure>
+        <figure class="snap"><img src="photos/IMG_7257.jpeg" alt="Sophia in a Greek Freak hoodie" style="object-position:50% 30%"><figcaption>Greek Freak. Clearly you have a type.</figcaption></figure>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <div class="page paper photos">
+      <div class="page-inner">
+        <figure class="snap"><img src="photos/IMG_7866.jpeg" alt="Sophia in the driver's seat, seen through the windshield" style="object-position:70% 20%"><figcaption>Front-row seat to your car concerts.</figcaption></figure>
+        <figure class="snap"><img src="photos/IMG_7868.jpeg" alt="Sophia through the car window" style="object-position:55% 35%"><figcaption>Caught you.</figcaption></figure>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <div class="page paper photos">
+      <div class="page-inner">
+        <figure class="snap"><img src="photos/IMG_7250.jpeg" alt="Sophia asleep on a flowery pillow" style="object-position:50% 45%"><figcaption>Sleeping Beauty, vol. 1</figcaption></figure>
+        <figure class="snap"><img src="photos/IMG_7919.jpeg" alt="Sophia asleep on a big bed" style="object-position:50% 55%"><figcaption>Sleeping Beauty, vol. 2</figcaption></figure>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <div class="page paper photos">
+      <div class="page-inner">
+        <figure class="snap"><img src="photos/IMG_7971.jpeg" alt="Close-up of Sophia smiling" style="object-position:50% 40%"><figcaption>Good morning, baby.</figcaption></figure>
+        <figure class="snap"><img src="photos/IMG_8481.jpeg" alt="Sophia napping under a beach umbrella" style="object-position:78% 60%"><figcaption>Beach. Nap. Repeat.</figcaption></figure>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <div class="page paper photos">
+      <div class="page-inner">
+        <figure class="snap"><img src="photos/IMG_8528.jpeg" alt="Dimitris and Sophia on a boat" style="object-position:50% 40%"><figcaption>Boat days.</figcaption></figure>
+        <figure class="snap"><img src="photos/IMG_8551.jpeg" alt="Sophia's hair blowing over Dimitris' face" style="object-position:50% 60%"><figcaption>Your hair, my face. Every time.</figcaption></figure>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <div class="page paper photos">
+      <div class="page-inner">
+        <figure class="snap"><img src="photos/IMG_8623.jpeg" alt="Sophia relaxing on a sun lounger with a cocktail" style="object-position:50% 45%"><figcaption>Living your best life.</figcaption></figure>
+        <figure class="snap wide"><img src="photos/IMG_8559.jpeg" alt="Sophia asleep"><figcaption>Sleeping Beauty, vol. 3</figcaption></figure>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- Christmas in Torino -->
+    <div class="page paper torino">
+      <div class="page-inner center">
+        <p class="line">A few weeks ago, I booked the tickets.</p>
+        <div class="pass">
+          <div class="pass-main">
+            <p class="small-caps">Boarding pass</p>
+            <div class="route-row">
+              <div><b>SKG</b><span>Thessaloniki</span></div>
+              <svg viewBox="-14 -10 28 20" aria-hidden="true"><g fill="#c45c6a"><path d="M-10 -1.4 L6 -1.4 Q 11 0 6 1.4 L-10 1.4 Z"/><path d="M-1 0 L-6 -9 L-2.5 -9 L4 0 L-2.5 9 L-6 9 Z"/><path d="M-9 0 L-12 -4.5 L-10 -4.5 L-6 0 L-10 4.5 L-12 4.5 Z"/></g></svg>
+              <div><b>TRN</b><span>Torino</span></div>
+            </div>
+            <div class="pass-row"><div><span>Date</span>28 Dec 2026</div><div><span>Passenger</span>Dimitris</div></div>
+          </div>
+          <div class="pass-stub"><span>Seat</span>next to you</div>
+        </div>
+        <p class="line">Christmas in Torino, with you and your family.<br>I'm so excited.</p>
+        <p class="quote-s"><span id="xmasDays">0</span> days to go.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- One year -->
+    <div class="page paper kiss">
+      <div class="page-inner center">
+        <p class="sub-s">And that brings us to today.</p>
+        <div class="wreath big" id="yearWreath">
+          <div class="kiss-center">
+            <p class="kissed">1 year</p>
+            <p class="date">8 · 11 · 2026</p>
+          </div>
+        </div>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- The letter (4 pages) -->
+    <div class="page paper letterp">
+      <div class="page-inner">
+        <p class="hello">Sophia,</p>
+        <p class="first">I can't believe it's been one year since we got together, baby!</p>
+        <p>It feels like I've known you for so long, and with every day that passes I feel even closer to you.</p>
+        <p>I know that a lot of times I can be weird, and maybe tiring. The simple reason is that sometimes I'm scared I'll lose you, and I don't want that to happen at all.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+    <div class="page paper letterp">
+      <div class="page-inner">
+        <p>You're an amazing girlfriend. You always try to make me feel loved, and better when I'm in a bad mood, and it's one of the things I love about you.</p>
+        <p>You're the first girl I've ever imagined spending the rest of my life with. I want you to know that. I've never felt this way before. Thank you for making me feel like this every day. I really hope you feel the same way about me too.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+    <div class="page paper letterp">
+      <div class="page-inner">
+        <p>It's really hard being far from you and not being able to see you every day.</p>
+        <p>I'm sorry for any bad feelings I've made you go through this year. Every day I'm trying to be a better boyfriend for you.</p>
+        <p>I want you to know that I love you so much. I love how kind you are, how you laugh, how pretty you are without even trying. I love everything about you.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+    <div class="page paper letterp">
+      <div class="page-inner">
+        <p>I also love that you love flowers, and that's why this book is full of them!</p>
+        <p>In a few weeks we'll meet again, and I'll finally hold you again. I'm counting the days!</p>
+        <p>Thank you for this amazing year, Sophia. Here's to the next one, and many more after it.</p>
+        <p class="first">I love you.</p>
+        <p class="sign">Yours,<b>Dimitris</b></p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+
+    <!-- The rest of our story -->
+    <div class="page paper chapter">
+      <div class="page-inner center">
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#c45c6a;--p2:#e7a9b2" aria-hidden="true"><use href="#sprig"/></svg>
+        <h2>The rest of our story</h2>
+        <p class="soon">The pages after this one are empty on purpose.<br>They're for everything we haven't done yet.</p>
+      </div>
+      <span class="page-num"></span>
+    </div>
+    <div class="page paper blank"><div class="page-inner"><p class="date-line">Date</p><div class="lines"></div></div><span class="page-num"></span></div>
+    <div class="page paper blank"><div class="page-inner"><p class="date-line">Date</p><div class="lines"></div></div><span class="page-num"></span></div>
+    <div class="page paper blank"><div class="page-inner"><p class="date-line">Date</p><div class="lines"></div></div><span class="page-num"></span></div>
+
+    <!-- Endpaper -->
+    <div class="page endpaper" data-endpaper></div>
+
+    <!-- 5 · Back cover -->
+    <div class="page cloth cover back" data-density="hard">
+      <span class="frame"></span>
+      <div class="page-inner">
+        <svg class="fl sprig" viewBox="0 0 100 150" style="--p:#f3c7cc;--p2:#fbe6e8;--lf:#a9c3a3" aria-hidden="true"><use href="#sprig"/></svg>
+        <p>2025 —</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls">
+  <button id="prev" aria-label="Previous page">‹</button>
+  <span id="pageInfo">Cover</span>
+  <button id="next" aria-label="Next page">›</button>
+</div>
+<p class="hint">drag the corner or use the arrows</p>
+
+<script>
+// ---------- Endpapers: a scattered pattern of small flowers & leaves ----------
+function endpaperSVG(seed) {
+  let s = seed, rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  const cols = [["#c86b79", "#e7a9b2"], ["#fffaf3", "#fbe9d8"], ["#d99a7b", "#f0c6ad"]];
+  let out = `<svg viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">`;
+  for (let y = 0; y < 440; y += 46) {
+    for (let x = (y / 46) % 2 ? 23 : 0; x < 320; x += 46) {
+      const jx = x + (rnd() - .5) * 10, jy = y + (rnd() - .5) * 10, r = Math.round(rnd() * 360);
+      if (rnd() < .45) {
+        const [p, p2] = cols[Math.floor(rnd() * cols.length)];
+        const z = 14 + rnd() * 8;
+        out += `<use href="#flower" x="${jx - z / 2}" y="${jy - z / 2}" width="${z}" height="${z}" style="--p:${p};--p2:${p2};--c:#e8c27a"/>`;
+      } else {
+        out += `<use href="#leaf" x="${jx - 4}" y="${jy - 8}" width="8" height="16" transform="rotate(${r} ${jx} ${jy})" style="--lf:#9fb79a"/>`;
+      }
+    }
+  }
+  return out + `</svg>`;
+}
+document.querySelectorAll("[data-endpaper]").forEach((el, i) => el.innerHTML = endpaperSVG(7 + i * 13));
+
+// ---------- Wreaths (her name; the kiss) ----------
+function wreath(id, full) {
+  const R = 40, n = full ? 34 : 26, pals = [["#e9a8b1", "#f6d3d8"], ["#c86b79", "#e7a9b2"], ["#f1d7b8", "#fbeedd"], ["#c9b8de", "#e8def3"]];
+  let svg = `<svg viewBox="0 0 100 100" aria-hidden="true">`;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    if (!full && a > .5 && a < 1.0) continue;               // a small gap at the bottom right, like a hand-tied wreath
+    const x = 50 + Math.cos(a) * R, y = 50 + Math.sin(a) * R, deg = a * 180 / Math.PI + 90;
+    const side = i % 2 ? 35 : -35;
+    svg += `<use href="#leaf" x="${x - 2.5}" y="${y - 5}" width="5" height="10" transform="rotate(${deg + side} ${x} ${y})"/>`;
+  }
+  const blooms = full
+    ? Array.from({ length: 14 }, (_, i) => [i * 360 / 14 - 90, i % 3 ? 7 : 10, i % 4])
+    : [[-90, 9, 1], [-30, 7, 0], [30, 6, 2], [150, 7, 0], [210, 9, 1], [100, 5, 2], [-150, 6, 2]];
+  blooms.forEach(([d, z, k]) => {
+    const a = d * Math.PI / 180, x = 50 + Math.cos(a) * R, y = 50 + Math.sin(a) * R, [p, p2] = pals[k];
+    svg += `<use href="#flower" x="${x - z / 2}" y="${y - z / 2}" width="${z}" height="${z}" style="--p:${p};--p2:${p2}"/>`;
+  });
+  document.getElementById(id).insertAdjacentHTML("afterbegin", svg + `</svg>`);
+}
+wreath("wreath");
+wreath("kissWreath", true);
+wreath("yearWreath", true);
+
+// Countdown to Torino
+(function xmas() {
+  const d = Math.ceil((new Date("2026-12-28T12:00:00") - new Date()) / 86400000);
+  document.getElementById("xmasDays").textContent = Math.max(0, d);
+})();
+
+// ---------- Chapter I globe: Columbia → Greece / Italy ----------
+(function apartGlobe() {
+  const el = document.getElementById("apartGlobe");
+  if (!el || !window.d3 || !window.topojson) return;
+  const S = 240, places = {
+    columbia: { name: "Columbia", c: [-81.03, 34.0], dx: -8, anchor: "end" },
+    greece:   { name: "Greece",   c: [22.94, 40.64], dx: 8, anchor: "start" },
+    italy:    { name: "Italy",    c: [7.69, 45.07],  dx: -6, dy: -8, anchor: "end" }
+  };
+  const proj = d3.geoOrthographic().scale(S / 2 - 4).translate([S / 2, S / 2]).rotate([30, -32]).clipAngle(90);
+  const path = d3.geoPath(proj);
+  const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${S} ${S}`);
+  svg.append("path").attr("class", "sphere").attr("d", path({ type: "Sphere" }));
+  svg.append("path").attr("class", "grat").attr("d", path(d3.geoGraticule10()));
+  const land = svg.append("path").attr("class", "land");
+  [["columbia", "greece"], ["columbia", "italy"]].forEach(([a, b]) =>
+    svg.append("path").attr("class", "route").attr("d", path({ type: "LineString", coordinates: [places[a].c, places[b].c] })));
+  Object.values(places).forEach(p => {
+    const [x, y] = proj(p.c);
+    svg.append("circle").attr("class", "pin").attr("cx", x).attr("cy", y).attr("r", 3.5);
+    svg.append("text").attr("class", "lbl").attr("x", x + p.dx).attr("y", y + (p.dy || 4)).attr("text-anchor", p.anchor).text(p.name);
+  });
+  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json")
+    .then(w => { land.attr("d", path(topojson.feature(w, w.objects.land))); })
+    .catch(() => {});
+})();
+
+// ---------- Page numbers: count from the first chapter page ----------
+document.querySelectorAll("#book .page").forEach((p, i) => {
+  const n = p.querySelector(".page-num");
+  if (n) n.textContent = i - 2;
+});
+
+// ---------- The book ----------
+const book = document.getElementById("book");
+const flip = new St.PageFlip(book, {
+  width: 420, height: 580,
+  size: "stretch",
+  minWidth: 260, maxWidth: 480,
+  minHeight: 360, maxHeight: 660,
+  showCover: true,
+  usePortrait: true,
+  maxShadowOpacity: 0.4,
+  mobileScrollSupport: false,
+  flippingTime: 1000
+});
+flip.loadFromHTML(book.querySelectorAll(".page"));
+
+const prev = document.getElementById("prev"), next = document.getElementById("next"), info = document.getElementById("pageInfo");
+function update() {
+  const i = flip.getCurrentPageIndex(), n = flip.getPageCount();
+  prev.disabled = i === 0;
+  next.disabled = i >= n - 1;
+  info.textContent = i === 0 ? "Sophia and Dimitris" : i >= n - 1 ? "to be continued" : "";
+}
+prev.addEventListener("click", () => flip.flipPrev());
+next.addEventListener("click", () => flip.flipNext());
+flip.on("flip", update);
+flip.on("changeOrientation", update);
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight") flip.flipNext();
+  if (e.key === "ArrowLeft") flip.flipPrev();
+});
+update();
+
+// ---------- A few petals drifting in the background ----------
+const cv = document.getElementById("petals"), ctx = cv.getContext("2d");
+let W, H, dpr;
+function size() { dpr = Math.min(devicePixelRatio || 1, 2); W = cv.width = innerWidth * dpr; H = cv.height = innerHeight * dpr; cv.style.width = innerWidth + "px"; cv.style.height = innerHeight + "px"; }
+size(); addEventListener("resize", size);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const COLORS = ["#e9a8b1", "#f1c6cc", "#efbd9f", "#d9c9e6"];
+const newPetal = init => ({ x: Math.random(), y: init ? Math.random() : -.05, s: Math.random() * 6 + 6, vy: Math.random() * .0006 + .0004,
+  sway: Math.random() * 6.28, rot: Math.random() * 6.28, vr: (Math.random() - .5) * .02, c: COLORS[Math.floor(Math.random() * COLORS.length)] });
+const petals = Array.from({ length: reduce ? 0 : 12 }, () => newPetal(true));
+(function frame() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.globalAlpha = .6;
+  petals.forEach((p, i) => {
+    p.y += p.vy; p.sway += .01; p.rot += p.vr;
+    ctx.save(); ctx.translate((p.x + Math.sin(p.sway) * .02) * W, p.y * H); ctx.rotate(p.rot);
+    ctx.fillStyle = p.c; ctx.beginPath(); ctx.ellipse(0, 0, p.s * .4 * dpr, p.s * .65 * dpr, 0, 0, 6.28); ctx.fill();
+    ctx.restore();
+    if (p.y > 1.05) petals[i] = newPetal(false);
+  });
+  if (!reduce) requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
