@@ -56,6 +56,8 @@ body {
 }
 #petals { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
 .stage, .controls { position: relative; z-index: 1; }
+#music { position: fixed; left: 0; top: 0; width: 200px; height: 200px; border: 0; opacity: 0; pointer-events: none; z-index: -1; }
+#musicBtn[aria-pressed="false"] { opacity: .45; }
 .serif { font-family: "Fraunces", Georgia, serif; }
 .fl { display: block; overflow: visible; }
 
@@ -384,6 +386,9 @@ body {
 </svg>
 
 <canvas id="petals" aria-hidden="true"></canvas>
+
+<!-- Background song: hidden player, starts on the first touch -->
+<div id="music" aria-hidden="true"></div>
 
 <div class="stage">
   <div id="book">
@@ -1501,6 +1506,7 @@ body {
   <button id="prev" aria-label="Previous page">‹</button>
   <span id="pageInfo">Cover</span>
   <button id="next" aria-label="Next page">›</button>
+  <button id="musicBtn" aria-label="Music" aria-pressed="true">♪</button>
 </div>
 <p class="hint">swipe, drag a corner, or use the arrows</p>
 
@@ -1620,6 +1626,44 @@ document.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft") flip.flipPrev();
 });
 update();
+
+// ---------- Background song: browsers only allow sound after a first touch ----------
+const SONG = "fOQ_-gZsnYQ", musicBtn = document.getElementById("musicBtn");
+let yt = null, ytReady = false, wantMusic = true, playing = false;
+function startMusic() {
+  if (ytReady && wantMusic && !playing) { yt.unMute(); yt.playVideo(); }
+}
+window.onYouTubeIframeAPIReady = () => {
+  yt = new YT.Player("music", {
+    host: "https://www.youtube-nocookie.com",
+    width: 200, height: 200, videoId: SONG,
+    playerVars: { playsinline: 1, controls: 0, rel: 0, loop: 1, playlist: SONG, origin: location.origin },
+    events: {
+      onReady() {
+        ytReady = true;
+        document.documentElement.dataset.music = "ready";
+        if (navigator.userActivation && navigator.userActivation.hasBeenActive) startMusic();
+      },
+      onStateChange(e) {
+        playing = e.data === YT.PlayerState.PLAYING;
+        document.documentElement.dataset.music = String(e.data);
+      }
+    }
+  });
+};
+["pointerup", "touchend", "click", "keydown"].forEach(type =>
+  document.addEventListener(type, e => {
+    if (!e.target.closest || !e.target.closest("#musicBtn")) startMusic();
+  }, { capture: true, passive: true }));
+musicBtn.addEventListener("click", () => {
+  wantMusic = !wantMusic;
+  musicBtn.setAttribute("aria-pressed", String(wantMusic));
+  if (wantMusic) startMusic();
+  else if (ytReady) yt.pauseVideo();
+});
+const ytScript = document.createElement("script");
+ytScript.src = "https://www.youtube.com/iframe_api";
+document.body.appendChild(ytScript);
 
 // ---------- A few petals drifting in the background ----------
 const cv = document.getElementById("petals"), ctx = cv.getContext("2d");
